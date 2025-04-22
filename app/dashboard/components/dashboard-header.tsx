@@ -13,6 +13,7 @@ import {
   CreditCard,
   Moon,
   Sun,
+  FileText,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -129,6 +130,13 @@ export function DashboardHeader() {
           >
             <CreditCard className='h-4 w-4 mr-1' />
             Planos
+          </Link>
+          <Link
+            href='/dashboard/invoices'
+            className='text-sm font-medium flex items-center'
+          >
+            <FileText className='h-4 w-4 mr-1' />
+            Notas Fiscais
           </Link>
         </nav>
 

@@ -27,9 +27,6 @@ export default function Home() {
             transition={{ duration: 0.5 }}
             className='flex items-center gap-2 mb-2'
           >
-            {/* <div className='w-10 h-10 border-2 border-white flex items-center justify-center'>
-              <div className='w-6 h-6 border-2 border-white'></div>
-            </div> */}
             <Image
               src='/images/logo-transparente.svg'
               alt='Logo Facilize'
@@ -69,7 +66,7 @@ export default function Home() {
           <div>
             <h2 className='text-3xl font-bold mb-4'>
               SEU TRABALHO MAIS{' '}
-              <span className='text-blue-600'>ORGANIZADO!</span>
+              <span className='text-blue-600'>ORGANIZADO</span>!
             </h2>
             <p className='text-gray-600 mb-6'>
               A Facilize é a plataforma completa para profissionais autônomos e
@@ -91,11 +88,11 @@ export default function Home() {
       <HowItWorks />
 
       {/* Advantages Section */}
-      <section className='py-16 bg-gray-50'>
+      <section className='py-16 bg-background'>
         <div className='max-w-7xl mx-auto px-4 md:px-8'>
           <AnimatedSection>
             <h2 className='text-2xl font-bold text-center mb-12'>
-              NOSSAS <span className='text-purple-600'>VANTAGENS</span>
+              NOSSAS <span className='text-primary'>VANTAGENS</span>
             </h2>
           </AnimatedSection>
 

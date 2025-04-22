@@ -23,26 +23,32 @@ export default function PricingCardDetailed({
 }: PricingCardDetailedProps) {
   return (
     <div
-      className={`border rounded-lg overflow-hidden flex flex-col ${
-        highlighted ? 'border-blue-500 shadow-md' : 'border-gray-200'
+      className={`border rounded-xl overflow-hidden flex flex-col transition-all duration-300 ${
+        highlighted
+          ? 'border-blue-500 dark:border-blue-400 shadow-lg dark:shadow-blue-900/20 scale-[1.02]'
+          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
       }`}
     >
-      <div className='p-6 bg-white'>
+      <div className='p-6 bg-white dark:bg-gray-800 flex flex-col h-full'>
         <div className='text-center mb-4'>
-          <h3 className='text-lg font-bold'>{title}</h3>
+          <h3 className='text-lg font-bold text-gray-900 dark:text-white'>
+            {title}
+          </h3>
           {discount && (
-            <span className='inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded mt-1'>
+            <span className='inline-block bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-200 text-xs px-2 py-1 rounded-full mt-2'>
               {discount}
             </span>
           )}
         </div>
 
         <div className='text-center mb-6'>
-          <div className='text-3xl font-bold text-blue-600'>
+          <div className='text-3xl font-bold text-blue-600 dark:text-blue-400'>
             <span className='text-sm align-top'>R$</span>
             {price}
           </div>
-          <div className='text-sm text-gray-500'>{period}</div>
+          <div className='text-sm text-gray-500 dark:text-gray-400'>
+            {period}
+          </div>
         </div>
 
         <ul className='space-y-3 mb-8'>
@@ -50,23 +56,31 @@ export default function PricingCardDetailed({
             <li key={index} className='flex items-start'>
               <Check
                 size={18}
-                className='text-green-500 mr-2 mt-0.5 flex-shrink-0'
+                className='text-emerald-500 dark:text-emerald-400 mr-2 mt-0.5 flex-shrink-0'
               />
-              <span className='text-sm'>{feature}</span>
+              <span className='text-sm text-gray-700 dark:text-gray-300'>
+                {feature}
+              </span>
             </li>
           ))}
         </ul>
 
         <div className='mt-auto'>
-          <Button className='w-full bg-blue-600 hover:bg-blue-700'>
+          <Button
+            className={`w-full ${
+              highlighted
+                ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600'
+                : 'bg-gray-900 hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600'
+            }`}
+          >
             {buttonText}
           </Button>
         </div>
       </div>
 
-      <div className='mt-auto p-4 bg-gray-50 flex justify-center'>
+      <div className='mt-auto p-4 bg-gray-50 dark:bg-gray-700/30 flex justify-center'>
         <Image
-          src='/images/logo-color.svg'
+          src={'/images/logo-color.svg'}
           alt='Logo Facilize'
           width={50}
           height={50}
@@ -76,4 +90,3 @@ export default function PricingCardDetailed({
     </div>
   )
 }
-

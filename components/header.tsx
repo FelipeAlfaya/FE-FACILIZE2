@@ -5,8 +5,9 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import Logo from '@/components/logo'
-import { Menu, X } from 'lucide-react'
+import { Menu, Moon, Sun, X } from 'lucide-react'
 import Image from 'next/image'
+import { useTheme } from 'next-themes'
 
 interface HeaderProps {
   showProfile?: boolean
@@ -14,40 +15,55 @@ interface HeaderProps {
 
 export default function Header({ showProfile = false }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const { theme, setTheme } = useTheme()
+
+  const toggleTheme = () => {
+    setTheme(theme === 'dark' ? 'light' : 'dark')
+  }
 
   return (
-    <header className='bg-white shadow-sm'>
+    <header className='shadow-sm bg-white dark:bg-slate-800'>
       <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
         <div className='flex justify-between h-16 items-center'>
           <div className='flex items-center'>
             <Link href='/' className='flex items-center'>
               <Image
-                src='/images/logo-2.svg'
-                alt='Profissional trabalhando'
+                src={
+                  theme === 'dark'
+                    ? '/images/logo-transparente.svg'
+                    : '/images/logo-2.svg'
+                }
+                alt='Logo Facilize'
                 width={50}
                 height={50}
-                className='w-[200px] h-auto object-cover'
+                className='w-[150px] h-auto object-cover'
               />
             </Link>
           </div>
 
           <div className='hidden md:flex items-center space-x-6'>
             <nav className='flex space-x-6'>
-              <Link href='/' className='text-gray-600 hover:text-gray-900'>
+              <Link
+                href='/'
+                className='text-gray-600 hover:text-gray-900 dark:text-gray-200 dark:hover:text-slate-950'
+              >
                 Início
               </Link>
               <Link
                 href='/planos'
-                className='text-gray-600 hover:text-gray-900'
+                className='text-gray-600 hover:text-gray-900 dark:text-gray-200 dark:hover:text-slate-950'
               >
                 Planos
               </Link>
-              <Link href='/sobre' className='text-gray-600 hover:text-gray-900'>
+              <Link
+                href='/sobre'
+                className='text-gray-600 hover:text-gray-900 dark:text-gray-200 dark:hover:text-slate-950'
+              >
                 Sobre
               </Link>
               <Link
                 href='/contato'
-                className='text-gray-600 hover:text-gray-900'
+                className='text-gray-600 hover:text-gray-900 dark:text-gray-200 dark:hover:text-slate-950'
               >
                 Contato
               </Link>
@@ -65,6 +81,19 @@ export default function Header({ showProfile = false }: HeaderProps) {
                 </Button>
               </Link>
             )}
+
+            <Button
+              variant='ghost'
+              size='icon'
+              onClick={toggleTheme}
+              className='relative'
+            >
+              {theme === 'dark' ? (
+                <Sun className='h-5 w-5' />
+              ) : (
+                <Moon className='h-5 w-5' />
+              )}
+            </Button>
           </div>
 
           <div className='md:hidden'>
@@ -126,4 +155,3 @@ export default function Header({ showProfile = false }: HeaderProps) {
     </header>
   )
 }
-

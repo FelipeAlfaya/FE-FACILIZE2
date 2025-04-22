@@ -32,25 +32,40 @@ export default function AnimatedPricingCard({
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      viewport={{ once: true }}
-      className={`border rounded-lg overflow-hidden flex flex-col ${
-        highlighted ? 'border-blue-500 shadow-md' : 'border-gray-200'
+      viewport={{ once: true, margin: '-50px' }}
+      className={`relative rounded-xl overflow-hidden flex flex-col h-full transition-all duration-300 ${
+        highlighted
+          ? 'border-2 border-blue-500 dark:border-blue-400 shadow-lg dark:shadow-blue-900/20'
+          : 'border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
       }`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       whileHover={{
-        y: -10,
-        boxShadow:
-          '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-        transition: { duration: 0.3 },
+        y: -8,
+        boxShadow: highlighted
+          ? '0 20px 25px -5px rgba(59, 130, 246, 0.2)'
+          : '0 10px 15px -5px rgba(0, 0, 0, 0.1)',
       }}
     >
-      <div className='p-6 bg-white'>
-        <div className='text-center mb-4'>
+      {highlighted && (
+        <div className='absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-blue-700 dark:from-blue-600 dark:to-blue-800' />
+      )}
+
+      <div className='p-8 bg-white dark:bg-gray-800 flex flex-col h-full'>
+        <div className='text-center mb-6'>
           <motion.h3
-            className='text-lg font-bold'
+            className={`text-xl font-bold ${
+              highlighted
+                ? 'text-blue-600 dark:text-blue-400'
+                : 'text-gray-900 dark:text-white'
+            }`}
             animate={{
-              color: isHovered && highlighted ? '#2563EB' : '#000000',
+              color:
+                isHovered && !highlighted
+                  ? '#2563EB'
+                  : highlighted
+                  ? '#2563EB'
+                  : '',
             }}
             transition={{ duration: 0.3 }}
           >
@@ -58,7 +73,7 @@ export default function AnimatedPricingCard({
           </motion.h3>
           {discount && (
             <motion.span
-              className='inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded mt-1'
+              className='inline-block bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-200 text-xs px-3 py-1 rounded-full mt-3'
               whileHover={{ scale: 1.05 }}
               transition={{ duration: 0.2 }}
             >
@@ -67,19 +82,28 @@ export default function AnimatedPricingCard({
           )}
         </div>
 
-        <div className='text-center mb-6'>
+        <div className='text-center mb-8'>
           <motion.div
-            className='text-3xl font-bold text-blue-600'
-            animate={{ scale: isHovered ? 1.05 : 1 }}
+            className={`text-4xl font-bold ${
+              highlighted
+                ? 'text-blue-600 dark:text-blue-400'
+                : 'text-gray-900 dark:text-white'
+            }`}
+            animate={{
+              scale: isHovered ? 1.03 : 1,
+              color: isHovered && !highlighted ? '#2563EB' : '',
+            }}
             transition={{ duration: 0.3 }}
           >
-            <span className='text-sm align-top'>R$</span>
+            <span className='text-lg align-top'>R$</span>
             {price}
           </motion.div>
-          <div className='text-sm text-gray-500'>{period}</div>
+          <div className='text-sm text-gray-500 dark:text-gray-400 mt-1'>
+            {period}
+          </div>
         </div>
 
-        <ul className='space-y-3 mb-8'>
+        <ul className='space-y-4 mb-8'>
           {features.map((feature, index) => (
             <motion.li
               key={index}
@@ -91,27 +115,32 @@ export default function AnimatedPricingCard({
             >
               <Check
                 size={18}
-                className='text-green-500 mr-2 mt-0.5 flex-shrink-0'
+                className={`mr-3 mt-0.5 flex-shrink-0 ${
+                  highlighted
+                    ? 'text-emerald-500 dark:text-emerald-400'
+                    : 'text-gray-400 dark:text-gray-500'
+                }`}
               />
-              <span className='text-sm'>{feature}</span>
+              <span className='text-sm text-gray-700 dark:text-gray-300'>
+                {feature}
+              </span>
             </motion.li>
           ))}
         </ul>
 
         <div className='mt-auto'>
           <motion.div
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             transition={{ duration: 0.2 }}
           >
             <Button
-              className={`w-full ${
+              className={`w-full text-lg py-4 ${
                 highlighted
-                  ? 'bg-blue-600 hover:bg-blue-700'
-                  : isHovered
-                  ? 'bg-blue-600 hover:bg-blue-700'
-                  : 'bg-blue-600 hover:bg-blue-700'
+                  ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800'
+                  : 'bg-gray-900 hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600'
               }`}
+              size='lg'
             >
               {buttonText}
             </Button>
@@ -119,27 +148,23 @@ export default function AnimatedPricingCard({
         </div>
       </div>
 
-      <div className='mt-auto mb-7 flex justify-center max-w-[50px] mx-auto'>
-        {/* <motion.div
-          className="w-8 h-8 border-2 border-blue-600 flex items-center justify-center"
-          animate={{ rotate: isHovered ? 45 : 0 }}
+      <div className='mt-auto p-4 bg-gray-50 dark:bg-gray-700/30 flex justify-center'>
+        <motion.div
+          animate={{
+            scale: isHovered ? 1.1 : 1,
+            opacity: isHovered ? 1 : 0.8,
+          }}
           transition={{ duration: 0.3 }}
         >
-          <motion.div
-            className="w-4 h-4 border-2 border-blue-600"
-            animate={{ rotate: isHovered ? -45 : 0 }}
-            transition={{ duration: 0.3 }}
-          /> */}
-        {/* </motion.div> */}
-        <Image
-          src='/images/logo-color.svg'
-          alt='Profissional trabalhando'
-          width={50}
-          height={50}
-          className='w-[50px] h-auto object-cover'
-        />
+          <Image
+            src={'/images/logo-color.svg'}
+            alt='Logo Facilize'
+            width={50}
+            height={50}
+            className='w-[50px] h-auto object-cover'
+          />
+        </motion.div>
       </div>
     </motion.div>
   )
 }
-
