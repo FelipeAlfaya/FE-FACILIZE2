@@ -31,9 +31,9 @@ export default function AnimatedPricingCard({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
+      transition={{ duration: 0.2 }}
       viewport={{ once: true, margin: '-50px' }}
-      className={`relative rounded-xl overflow-hidden flex flex-col h-full transition-all duration-300 ${
+      className={`relative rounded-xl overflow-hidden flex flex-col h-full transition-all ${
         highlighted
           ? 'border-2 border-blue-500 dark:border-blue-400 shadow-lg dark:shadow-blue-900/20'
           : 'border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
@@ -41,7 +41,7 @@ export default function AnimatedPricingCard({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       whileHover={{
-        y: -8,
+        y: -15,
         boxShadow: highlighted
           ? '0 20px 25px -5px rgba(59, 130, 246, 0.2)'
           : '0 10px 15px -5px rgba(0, 0, 0, 0.1)',
@@ -93,7 +93,7 @@ export default function AnimatedPricingCard({
               scale: isHovered ? 1.03 : 1,
               color: isHovered && !highlighted ? '#2563EB' : '',
             }}
-            transition={{ duration: 0.3 }}
+            transition={{ duration: 0.1 }}
           >
             <span className='text-lg align-top'>R$</span>
             {price}

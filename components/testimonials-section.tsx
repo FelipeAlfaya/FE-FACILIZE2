@@ -12,7 +12,7 @@ const testimonials = [
       'A Facilize transformou completamente a gestão do meu consultório. Economizo horas por semana com a emissão automática de notas fiscais e o sistema de agendamentos.',
     author: 'Dra. Carla Mendes',
     role: 'Psicóloga',
-    avatar: '/images/testimonial-1.jpg',
+    avatar: '/images/Carla.png',
   },
   {
     id: 2,
@@ -20,7 +20,7 @@ const testimonials = [
       'Como contador, recomendo a Facilize para todos os meus clientes. A plataforma é intuitiva e mantém tudo em conformidade com a legislação fiscal, facilitando muito o meu trabalho.',
     author: 'Ricardo Oliveira',
     role: 'Contador',
-    avatar: '/images/testimonial-2.jpg',
+    avatar: '/images/Ricardo.png',
   },
   {
     id: 3,
@@ -28,7 +28,7 @@ const testimonials = [
       'O chatbot integrado ao WhatsApp melhorou muito a comunicação com meus clientes. As confirmações automáticas reduziram as faltas em mais de 70%!',
     author: 'Fernanda Costa',
     role: 'Fisioterapeuta',
-    avatar: '/images/testimonial-3.jpg',
+    avatar: '/images/Fernanda.png',
   },
 ]
 
