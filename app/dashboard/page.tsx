@@ -8,6 +8,7 @@ import {
   Users,
   ArrowRight,
   TrendingUp,
+  MessageSquareText,
 } from 'lucide-react'
 import { DashboardChart } from './components/dashboard-chart'
 import Link from 'next/link'
@@ -152,6 +153,15 @@ export default function DashboardPage() {
               </Button>
               <Button asChild>
                 <Link href='/dashboard/plans'>Gerenciar Plano</Link>
+              </Button>
+              <Button asChild>
+                <Link href='/dashboard/invoices'>Notas Fiscais</Link>
+              </Button>
+              <Button asChild>
+                <Link href='/dashboard/chatbot'>
+                  <MessageSquareText className='h-4 w-4 mr-2' />
+                  Chatbot WhatsApp
+                </Link>
               </Button>
             </CardContent>
           </Card>
