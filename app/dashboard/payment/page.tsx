@@ -1,19 +1,19 @@
 import { DashboardHeader } from '../components/dashboard-header'
-import { ScheduleCalendar } from '../components/schedule-calendar'
+import { PaymentFlow } from '../components/payment-flow'
 
-export default function SchedulePage() {
+export default function PaymentPage() {
   return (
     <div className='min-h-screen bg-background'>
       <DashboardHeader />
       <main className='container mx-auto px-4 py-6'>
         <div className='mb-8'>
-          <h1 className='text-2xl font-bold mb-2'>Minha Agenda</h1>
+          <h1 className='text-2xl font-bold mb-2'>Pagamento</h1>
           <p className='text-gray-600'>
-            Gerencie seus agendamentos e compromissos
+            Escolha seu plano e método de pagamento
           </p>
         </div>
 
-        <ScheduleCalendar />
+        <PaymentFlow />
       </main>
     </div>
   )

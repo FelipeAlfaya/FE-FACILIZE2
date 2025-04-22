@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import Link from 'next/link'
 
 export function PricingPlans() {
   const [billingCycle, setBillingCycle] = useState('monthly')
@@ -24,6 +25,7 @@ export function PricingPlans() {
       features: [
         'Emissão de 20 notas fiscais por mês',
         'Controle de 10 clientes',
+        'Agenda de compromissos',
         'Agenda de compromissos',
         'Suporte por email',
       ],
@@ -82,8 +84,10 @@ export function PricingPlans() {
         {plans.map((plan) => (
           <Card
             key={plan.name}
-            className={`flex flex-col ${
-              plan.popular ? 'border-blue-500 shadow-lg' : ''
+            className={`flex flex-col bg-card text-card-foreground ${
+              plan.popular
+                ? 'border-blue-500 dark:border-blue-400 shadow-lg'
+                : ''
             }`}
           >
             {plan.popular && (
@@ -137,8 +141,13 @@ export function PricingPlans() {
                 className={`w-full ${
                   plan.popular ? 'bg-blue-600 hover:bg-blue-700' : ''
                 }`}
+                asChild
               >
-                {plan.cta}
+                <Link
+                  href={`/dashboard/payment?plan=${plan.name.toLowerCase()}`}
+                >
+                  {plan.cta}
+                </Link>
               </Button>
             </CardFooter>
           </Card>

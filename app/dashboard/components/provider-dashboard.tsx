@@ -102,7 +102,7 @@ export function ProviderDashboard() {
   return (
     <div className='grid gap-6 md:grid-cols-3'>
       <div className='md:col-span-1'>
-        <Card>
+        <Card className='bg-card text-card-foreground'>
           <CardHeader>
             <CardTitle className='text-lg'>Calendário</CardTitle>
           </CardHeader>
@@ -133,7 +133,7 @@ export function ProviderDashboard() {
       </div>
 
       <div className='md:col-span-2'>
-        <Card>
+        <Card className='bg-card text-card-foreground'>
           <CardHeader>
             <CardTitle className='text-lg'>
               Agendamentos {date && `- ${date.toLocaleDateString('pt-BR')}`}

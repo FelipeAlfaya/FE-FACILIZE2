@@ -1,15 +1,14 @@
 import type React from 'react'
+import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import { ThemeProvider } from '@/components/theme-provider'
+import { ThemeProvider } from '../components/theme-provider'
 
 const inter = Inter({ subsets: ['latin'] })
 
-export const metadata = {
-  title: 'Facilize - Seu trabalho mais organizado',
-  description:
-    'Facilize - Plataforma para organização de trabalho e emissão de notas fiscais',
-  generator: 'v0.dev',
+export const metadata: Metadata = {
+  title: 'Facilize',
+  description: 'Plataforma para encontrar e agendar serviços com profissionais',
 }
 
 export default function RootLayout({
@@ -18,9 +17,14 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang='pt-BR'>
+    <html lang='pt-BR' suppressHydrationWarning>
       <body className={inter.className}>
-        <ThemeProvider attribute='class' defaultTheme='light'>
+        <ThemeProvider
+          attribute='class'
+          defaultTheme='system'
+          enableSystem
+          disableTransitionOnChange
+        >
           {children}
         </ThemeProvider>
       </body>

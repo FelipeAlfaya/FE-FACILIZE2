@@ -1,5 +1,6 @@
 import { Camera, Edit } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import Link from 'next/link'
 
 export function ProfileHeader() {
   return (
@@ -31,7 +32,7 @@ export function ProfileHeader() {
         </span>
         <Button variant='ghost' size='sm' className='ml-2'>
           <Edit className='h-3 w-3 mr-1' />
-          Alterar plano
+          <Link href='/dashboard/plans'>Alterar plano</Link>
         </Button>
       </div>
     </div>

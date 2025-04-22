@@ -3,7 +3,7 @@ import { PricingPlans } from '../components/pricing-plans'
 
 export default function PlansPage() {
   return (
-    <div className='min-h-screen bg-white'>
+    <div className='min-h-screen bg-background'>
       <DashboardHeader />
       <main className='container mx-auto px-4 py-6'>
         <div className='mb-8 text-center'>

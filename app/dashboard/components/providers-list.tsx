@@ -144,7 +144,10 @@ export function ProvidersList() {
 
       <div className='grid gap-6 md:grid-cols-2 lg:grid-cols-3'>
         {sortedProviders.map((provider) => (
-          <Card key={provider.id} className='overflow-hidden'>
+          <Card
+            key={provider.id}
+            className='overflow-hidden bg-card text-card-foreground'
+          >
             <CardContent className='p-0'>
               <div className='p-6'>
                 <div className='flex justify-between items-start mb-4'>
