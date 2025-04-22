@@ -21,7 +21,7 @@ export default function Contato() {
 
       {/* Hero Section */}
       <section className='relative w-full h-[300px] bg-gradient-to-r from-blue-500 to-blue-700 flex flex-col items-center justify-center text-white'>
-        <div className="absolute inset-0 bg-[url('/images/mountains-bg.png')] bg-cover bg-center opacity-30" />
+        <div className="absolute inset-0 bg-[url('/images/mountains-bg.jpeg')] bg-cover bg-center opacity-30" />
         <div className='relative z-10 text-center px-4'>
           <h1 className='text-4xl font-bold mb-4'>Entre em Contato</h1>
           <p className='max-w-2xl mx-auto text-lg'>
@@ -277,4 +277,3 @@ export default function Contato() {
     </main>
   )
 }
-

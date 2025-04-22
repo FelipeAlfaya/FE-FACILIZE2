@@ -19,7 +19,7 @@ export default function Home() {
 
       {/* Hero Section */}
       <section className='relative w-full h-[500px] bg-gradient-to-b from-blue-400 to-blue-600 flex flex-col items-center justify-center text-white'>
-        <div className="absolute inset-0 bg-[url('/images/mountains-bg.svg')] bg-cover bg-center opacity-50" />
+        <div className="absolute inset-0 bg-[url('/images/mountains-bg.jpeg')] bg-cover bg-center opacity-50" />
         <div className='relative z-10 flex flex-col items-center justify-center space-y-6'>
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
@@ -207,4 +207,3 @@ export default function Home() {
     </main>
   )
 }
-
