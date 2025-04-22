@@ -61,9 +61,9 @@ export default function Home() {
             <Image
               src='/images/business-person.png'
               alt='Profissional trabalhando'
-              width={500}
-              height={400}
-              className='w-full h-auto object-cover'
+              width={450}
+              height={450}
+              className='w-[450px] h-auto object-cover'
             />
           </div>
           <div>
