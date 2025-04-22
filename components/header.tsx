@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import Logo from '@/components/logo'
 import { Menu, X } from 'lucide-react'
+import Image from 'next/image'
 
 interface HeaderProps {
   showProfile?: boolean
@@ -20,8 +21,13 @@ export default function Header({ showProfile = false }: HeaderProps) {
         <div className='flex justify-between h-16 items-center'>
           <div className='flex items-center'>
             <Link href='/' className='flex items-center'>
-              <Logo />
-              <span className='ml-2 text-xl font-bold'>Facilize</span>
+              <Image
+                src='/images/logo-2.svg'
+                alt='Profissional trabalhando'
+                width={50}
+                height={50}
+                className='w-[200px] h-auto object-cover'
+              />
             </Link>
           </div>
 
@@ -30,13 +36,19 @@ export default function Header({ showProfile = false }: HeaderProps) {
               <Link href='/' className='text-gray-600 hover:text-gray-900'>
                 Início
               </Link>
-              <Link href='/' className='text-gray-600 hover:text-gray-900'>
+              <Link
+                href='/planos'
+                className='text-gray-600 hover:text-gray-900'
+              >
                 Planos
               </Link>
-              <Link href='/' className='text-gray-600 hover:text-gray-900'>
+              <Link href='/sobre' className='text-gray-600 hover:text-gray-900'>
                 Sobre
               </Link>
-              <Link href='/' className='text-gray-600 hover:text-gray-900'>
+              <Link
+                href='/contato'
+                className='text-gray-600 hover:text-gray-900'
+              >
                 Contato
               </Link>
             </nav>
@@ -47,7 +59,7 @@ export default function Header({ showProfile = false }: HeaderProps) {
                 <AvatarFallback>US</AvatarFallback>
               </Avatar>
             ) : (
-              <Link href='/'>
+              <Link href='/login'>
                 <Button className='bg-blue-600 hover:bg-blue-700'>
                   Entrar
                 </Button>
@@ -78,21 +90,21 @@ export default function Header({ showProfile = false }: HeaderProps) {
               Início
             </Link>
             <Link
-              href='/'
+              href='/planos'
               className='block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50'
               onClick={() => setIsMenuOpen(false)}
             >
               Planos
             </Link>
             <Link
-              href='/'
+              href='/sobre'
               className='block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50'
               onClick={() => setIsMenuOpen(false)}
             >
               Sobre
             </Link>
             <Link
-              href='/'
+              href='/contato'
               className='block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50'
               onClick={() => setIsMenuOpen(false)}
             >
@@ -101,7 +113,7 @@ export default function Header({ showProfile = false }: HeaderProps) {
 
             {!showProfile && (
               <Link
-                href='/'
+                href='/login'
                 className='block px-3 py-2 rounded-md text-base font-medium bg-blue-600 text-white hover:bg-blue-700'
                 onClick={() => setIsMenuOpen(false)}
               >

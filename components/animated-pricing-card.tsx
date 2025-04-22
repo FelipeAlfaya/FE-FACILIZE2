@@ -136,7 +136,7 @@ export default function AnimatedPricingCard({
           alt='Profissional trabalhando'
           width={50}
           height={50}
-          className='w-full h-auto object-cover'
+          className='w-[50px] h-auto object-cover'
         />
       </div>
     </motion.div>
