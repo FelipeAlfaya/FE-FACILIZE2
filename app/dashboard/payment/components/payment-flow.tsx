@@ -1,11 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { PlanSelection } from './plan-selection'
-import { CheckoutForm } from './checkout-form'
+import { PlanSelection } from '../../plans/components/plan-selection'
+import { CheckoutForm } from '../../components/checkout-form'
 import { PaymentConfirmation } from './payment-confirmation'
 import { Card } from '@/components/ui/card'
-import { Steps } from './steps'
+import { Steps } from '../../components/steps'
 
 export type Plan = {
   id: string
@@ -36,7 +36,11 @@ const steps = [
   { id: 'confirmation', title: 'Confirmação' },
 ]
 
-export function PaymentFlow() {
+export interface PaymentFlowProps {
+  onComplete?: () => void | Promise<void>
+}
+
+export function PaymentFlow({ onComplete }: PaymentFlowProps) {
   const [currentStep, setCurrentStep] = useState('plan')
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails>({
     plan: null,
@@ -71,6 +75,8 @@ export function PaymentFlow() {
       setIsProcessing(false)
       setIsComplete(true)
       setCurrentStep('confirmation')
+      // Chama onComplete quando o pagamento é concluído
+      if (onComplete) onComplete()
     }, 2000)
   }
 

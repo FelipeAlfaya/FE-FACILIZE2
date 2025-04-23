@@ -5,7 +5,7 @@ import { Check, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { CardContent } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import type { Plan } from './payment-flow'
+import type { Plan } from '../../payment/components/payment-flow'
 
 type PlanSelectionProps = {
   onSelectPlan: (plan: Plan, billingCycle: 'monthly' | 'annual') => void

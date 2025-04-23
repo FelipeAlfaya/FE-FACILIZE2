@@ -1,5 +1,5 @@
 import { DashboardHeader } from '../components/dashboard-header'
-import { PricingPlans } from '../components/pricing-plans'
+import { PricingPlans } from './components/pricing-plans'
 
 export default function PlansPage() {
   return (

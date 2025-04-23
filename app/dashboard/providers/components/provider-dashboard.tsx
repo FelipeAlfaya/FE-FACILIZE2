@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
-import { AppointmentDetailsModal } from './appointment-details-modal'
+import { AppointmentDetailsModal } from '../../components/appointment-details-modal'
 
 type Appointment = {
   id: string

@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { ScheduleModal } from './schedule.modal'
+import { ScheduleModal } from '../../components/schedule.modal'
 
 type Provider = {
   id: string

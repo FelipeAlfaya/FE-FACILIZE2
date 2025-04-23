@@ -1,5 +1,5 @@
 import { DashboardHeader } from '../components/dashboard-header'
-import { PaymentFlow } from '../components/payment-flow'
+import { PaymentFlow } from './components/payment-flow'
 
 export default function PaymentPage() {
   return (

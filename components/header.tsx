@@ -4,7 +4,6 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import Logo from '@/components/logo'
 import { Menu, Moon, Sun, X } from 'lucide-react'
 import Image from 'next/image'
 import { useTheme } from 'next-themes'
@@ -107,7 +106,6 @@ export default function Header({ showProfile = false }: HeaderProps) {
         </div>
       </div>
 
-      {/* Mobile menu */}
       {isMenuOpen && (
         <div className='md:hidden'>
           <div className='px-2 pt-2 pb-3 space-y-1 sm:px-3'>

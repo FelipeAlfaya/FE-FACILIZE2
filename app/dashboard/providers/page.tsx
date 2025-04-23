@@ -1,6 +1,6 @@
 import { DashboardHeader } from '../components/dashboard-header'
-import { ProvidersList } from '../components/providers-list'
-import { ProviderFilters } from '../components/providers-filters'
+import { ProvidersList } from './components/providers-list'
+import { ProviderFilters } from './components/providers-filters'
 
 export default function ProvidersPage() {
   return (

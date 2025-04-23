@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Separator } from '@/components/ui/separator'
 import { CreditCard, ArrowLeft, QrCode, Receipt } from 'lucide-react'
-import type { Plan, PaymentMethod } from './payment-flow'
+import type { Plan, PaymentMethod } from '../payment/components/payment-flow'
 
 type CheckoutFormProps = {
   plan: Plan

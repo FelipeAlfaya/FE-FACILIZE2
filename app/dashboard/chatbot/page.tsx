@@ -1,48 +1,101 @@
 import { DashboardHeader } from '../components/dashboard-header'
-import { ChatbotTabs } from '../components/chatbot-tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb'
-import { MessageSquareText } from 'lucide-react'
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { ChatbotServices } from './components/chatbot-services'
+import { ChatbotPrompts } from './components/chatbot-prompts'
+import { ChatbotAnalytics } from './components/chatbot-analytics'
+import { ChatbotSettings } from './components/chatbot-settings'
+import { use } from 'react'
+import { useAuthCheck } from '@/hooks/useAuthCheck'
 
 export default function ChatbotPage() {
+  useAuthCheck('PROVIDER')
   return (
     <div className='min-h-screen bg-background'>
       <DashboardHeader />
       <main className='container mx-auto px-4 py-6'>
-        <div className='mb-6'>
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink href='/dashboard'>Dashboard</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbLink href='/dashboard/chatbot'>
-                  Chatbot WhatsApp
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
+        <div className='mb-8'>
+          <h1 className='text-3xl font-bold tracking-tight'>
+            Painel de Controle do WhatsApp
+          </h1>
+          <p className='text-muted-foreground mt-2'>
+            Configure e gerencie seu chatbot de WhatsApp para agendamentos e
+            atendimento ao cliente.
+          </p>
         </div>
 
-        <div className='mb-8 flex items-center gap-3'>
-          <div className='h-10 w-10 rounded-md bg-green-100 dark:bg-green-900/30 flex items-center justify-center'>
-            <MessageSquareText className='h-5 w-5 text-green-600 dark:text-green-500' />
-          </div>
-          <div>
-            <h1 className='text-2xl font-bold'>Chatbot WhatsApp</h1>
-            <p className='text-muted-foreground'>
-              Configure e gerencie seu assistente virtual para agendamentos
-            </p>
-          </div>
-        </div>
+        <Tabs defaultValue='services' className='space-y-6'>
+          <TabsList className='grid w-full max-w-2xl grid-cols-4'>
+            <TabsTrigger value='services'>Serviços</TabsTrigger>
+            <TabsTrigger value='prompts'>Prompts</TabsTrigger>
+            <TabsTrigger value='analytics'>Análises</TabsTrigger>
+            <TabsTrigger value='settings'>Configurações</TabsTrigger>
+          </TabsList>
 
-        <ChatbotTabs />
+          <TabsContent value='services'>
+            <Card>
+              <CardHeader>
+                <CardTitle>Serviços e Tarefas</CardTitle>
+                <CardDescription>
+                  Configure os serviços e tarefas que o chatbot pode realizar
+                  para seus clientes.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ChatbotServices />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value='prompts'>
+            <Card>
+              <CardHeader>
+                <CardTitle>Prompts de IA</CardTitle>
+                <CardDescription>
+                  Personalize as mensagens e prompts que a IA usará para
+                  interagir com seus clientes.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ChatbotPrompts />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value='analytics'>
+            <Card>
+              <CardHeader>
+                <CardTitle>Análises e Estatísticas</CardTitle>
+                <CardDescription>
+                  Visualize estatísticas de uso e desempenho do seu chatbot.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ChatbotAnalytics />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value='settings'>
+            <Card>
+              <CardHeader>
+                <CardTitle>Configurações</CardTitle>
+                <CardDescription>
+                  Gerencie as configurações gerais do seu chatbot de WhatsApp.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ChatbotSettings />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   )

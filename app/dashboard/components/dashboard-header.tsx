@@ -14,6 +14,7 @@ import {
   Moon,
   Sun,
   FileText,
+  DollarSign,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -29,6 +30,8 @@ import {
 } from '@/components/ui/popover'
 import { useTheme } from 'next-themes'
 import Image from 'next/image'
+import { useAuth } from '@/context/AuthContext'
+import { useRouter } from 'next/navigation'
 
 type Notification = {
   id: string
@@ -74,8 +77,16 @@ export function DashboardHeader() {
     useState<Notification[]>(mockNotifications)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const { theme, setTheme } = useTheme()
+  const { user } = useAuth()
+  const router = useRouter()
 
   const unreadCount = notifications.filter((n) => !n.read).length
+
+  const handleLogout = () => {
+    localStorage.removeItem('access_token')
+    localStorage.removeItem('user')
+    router.push('/login')
+  }
 
   const markAllAsRead = () => {
     setNotifications(notifications.map((n) => ({ ...n, read: true })))
@@ -103,13 +114,25 @@ export function DashboardHeader() {
         </Link>
 
         <nav className='hidden md:flex items-center space-x-6'>
-          <Link
-            href='/dashboard'
-            className='text-sm font-medium flex items-center'
-          >
-            <Home className='h-4 w-4 mr-1' />
-            Início
-          </Link>
+          {user?.type === 'PROVIDER' && (
+            <>
+              <Link
+                href='/dashboard'
+                className='text-sm font-medium flex items-center'
+              >
+                <Home className='h-4 w-4 mr-1' />
+                Dashboard
+              </Link>
+              <Link
+                href='/dashboard/accounting'
+                className='text-sm font-medium flex items-center'
+              >
+                <DollarSign className='h-4 w-4 mr-1' />
+                Contabilidade
+              </Link>
+            </>
+          )}
+
           <Link
             href='/dashboard/providers'
             className='text-sm font-medium flex items-center'
@@ -117,13 +140,7 @@ export function DashboardHeader() {
             <Users className='h-4 w-4 mr-1' />
             Provedores
           </Link>
-          <Link
-            href='/dashboard/schedule'
-            className='text-sm font-medium flex items-center'
-          >
-            <Calendar className='h-4 w-4 mr-1' />
-            Agenda
-          </Link>
+
           <Link
             href='/dashboard/plans'
             className='text-sm font-medium flex items-center'
@@ -131,13 +148,24 @@ export function DashboardHeader() {
             <CreditCard className='h-4 w-4 mr-1' />
             Planos
           </Link>
+
           <Link
-            href='/dashboard/invoices'
+            href='/dashboard/schedule'
             className='text-sm font-medium flex items-center'
           >
-            <FileText className='h-4 w-4 mr-1' />
-            Notas Fiscais
+            <Calendar className='h-4 w-4 mr-1' />
+            Agenda
           </Link>
+
+          {user?.provider?.cnpj && (
+            <Link
+              href='/dashboard/invoices'
+              className='text-sm font-medium flex items-center'
+            >
+              <FileText className='h-4 w-4 mr-1' />
+              Notas Fiscais
+            </Link>
+          )}
         </nav>
 
         <div className='flex items-center space-x-4'>
@@ -241,7 +269,7 @@ export function DashboardHeader() {
                   <span>Configurações</span>
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout}>
                 <LogOut className='mr-2 h-4 w-4' />
                 <span>Sair</span>
               </DropdownMenuItem>

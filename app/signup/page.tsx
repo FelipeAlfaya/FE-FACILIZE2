@@ -2,27 +2,40 @@
 
 import type React from 'react'
 
+import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
-import Logo from '@/components/logo'
 import AnimatedInput from '@/components/animated-input'
 import { motion } from 'framer-motion'
-import { useState } from 'react'
 import Image from 'next/image'
+import { toast } from 'sonner'
+import { Loader2 } from 'lucide-react'
+import {
+  PaymentFlow,
+  type PaymentFlowProps,
+} from '../dashboard/payment/components/payment-flow'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Label } from '@/components/ui/label'
 
 export default function Signup() {
+  const router = useRouter()
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
     confirmPassword: '',
+    document: '', // CPF ou CNPJ
+    userType: 'CLIENT',
+    documentType: 'CPF', // Default to CPF
     terms: false,
   })
-
+  const [showPaymentFlow, setShowPaymentFlow] = useState(false)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target
@@ -32,8 +45,71 @@ export default function Signup() {
     }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const validateCPF = (cpf: string) => {
+    cpf = cpf.replace(/[^\d]+/g, '')
+    if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false
+
+    let sum = 0
+    let remainder
+
+    for (let i = 1; i <= 9; i++)
+      sum += Number.parseInt(cpf.substring(i - 1, i)) * (11 - i)
+    remainder = (sum * 10) % 11
+
+    if (remainder === 10 || remainder === 11) remainder = 0
+    if (remainder !== Number.parseInt(cpf.substring(9, 10))) return false
+
+    sum = 0
+    for (let i = 1; i <= 10; i++)
+      sum += Number.parseInt(cpf.substring(i - 1, i)) * (12 - i)
+    remainder = (sum * 10) % 11
+
+    if (remainder === 10 || remainder === 11) remainder = 0
+    if (remainder !== Number.parseInt(cpf.substring(10, 11))) return false
+
+    return true
+  }
+
+  const validateCNPJ = (cnpj: string) => {
+    cnpj = cnpj.replace(/[^\d]+/g, '')
+
+    if (cnpj.length !== 14 || /^(\d)\1{13}$/.test(cnpj)) return false
+
+    // Validação do primeiro dígito verificador
+    let length = cnpj.length - 2
+    let numbers = cnpj.substring(0, length)
+    const digits = cnpj.substring(length)
+    let sum = 0
+    let pos = length - 7
+
+    for (let i = length; i >= 1; i--) {
+      sum += Number.parseInt(numbers.charAt(length - i)) * pos--
+      if (pos < 2) pos = 9
+    }
+
+    let result = sum % 11 < 2 ? 0 : 11 - (sum % 11)
+    if (result !== Number.parseInt(digits.charAt(0))) return false
+
+    // Validação do segundo dígito verificador
+    length = length + 1
+    numbers = cnpj.substring(0, length)
+    sum = 0
+    pos = length - 7
+
+    for (let i = length; i >= 1; i--) {
+      sum += Number.parseInt(numbers.charAt(length - i)) * pos--
+      if (pos < 2) pos = 9
+    }
+
+    result = sum % 11 < 2 ? 0 : 11 - (sum % 11)
+    if (result !== Number.parseInt(digits.charAt(1))) return false
+
+    return true
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setIsLoading(true)
 
     const newErrors: { [key: string]: string } = {}
 
@@ -57,20 +133,134 @@ export default function Signup() {
       newErrors.confirmPassword = 'As senhas não coincidem'
     }
 
+    if (!formData.document) {
+      newErrors.document = `${formData.documentType} é obrigatório`
+    } else if (
+      formData.documentType === 'CPF' &&
+      !validateCPF(formData.document)
+    ) {
+      newErrors.document = 'CPF inválido'
+    } else if (
+      formData.documentType === 'CNPJ' &&
+      !validateCNPJ(formData.document)
+    ) {
+      newErrors.document = 'CNPJ inválido'
+    }
+
     if (!formData.terms) {
       newErrors.terms = 'Você deve aceitar os termos'
     }
 
-    setErrors(newErrors)
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors)
+      setIsLoading(false)
+      return
+    }
 
-    if (Object.keys(newErrors).length === 0) {
-      // Submit form logic would go here
-      console.log('Form submitted', formData)
+    const requestData = {
+      email: formData.email,
+      password: formData.password,
+      name: formData.name,
+      type: formData.userType.toUpperCase(),
+      ...(formData.documentType === 'CPF'
+        ? { cpf: formatDocument(formData.document) }
+        : { cnpj: formatDocument(formData.document) }),
+    }
+
+    console.log('Enviando dados:', JSON.stringify(requestData, null, 2))
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}auth/register`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestData),
+        }
+      )
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Erro ao cadastrar')
+      }
+
+      const data = await response.json()
+      toast.success('Cadastro realizado com sucesso!')
+      router.push('/login')
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao cadastrar')
+      console.error('Erro no cadastro:', error)
+    } finally {
+      setIsLoading(false)
     }
   }
 
+  const handlePaymentComplete: PaymentFlowProps['onComplete'] = async () => {
+    // await registerUser()
+  }
+
+  const formatDocument = (value: string) => {
+    return value.replace(/\D/g, '')
+  }
+
+  const formatCPForCNPJ = (value: string) => {
+    const numericValue = value.replace(/\D/g, '')
+
+    if (formData.documentType === 'CPF') {
+      // Formatação de CPF (000.000.000-00)
+      return numericValue
+        .slice(0, 11)
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+        .replace(/(-\d{2})\d+?$/, '$1')
+    } else {
+      // Formatação de CNPJ (00.000.000/0000-00)
+      return numericValue
+        .slice(0, 14)
+        .replace(/^(\d{2})(\d)/, '$1.$2')
+        .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+        .replace(/\.(\d{3})(\d)/, '.$1/$2')
+        .replace(/(\d{4})(\d)/, '$1-$2')
+        .replace(/(-\d{2})\d+?$/, '$1')
+    }
+  }
+
+  const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formattedValue = formatCPForCNPJ(e.target.value)
+    setFormData((prev) => ({
+      ...prev,
+      document: formattedValue,
+    }))
+  }
+
+  const handleDocumentTypeChange = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      documentType: value,
+      document: '', // Clear document when changing type
+    }))
+  }
+
+  if (showPaymentFlow) {
+    return (
+      <main className='min-h-screen bg-gray-50 dark:bg-gray-900'>
+        <Header />
+        <div className='max-w-4xl mx-auto py-12 px-4'>
+          <h1 className='text-2xl font-bold mb-8 text-center'>
+            Escolha seu plano de assinatura
+          </h1>
+          <PaymentFlow onComplete={handlePaymentComplete} />
+        </div>
+        <Footer />
+      </main>
+    )
+  }
+
   return (
-    <main className='min-h-screen bg-gray-50'>
+    <main className='min-h-screen bg-gray-50 dark:bg-gray-900'>
       <Header />
 
       <div className='w-full gap-10 lg:grid lg:min-h-[600px] lg:grid-cols-2 lg:gap-0 xl:min-h-[800px]'>
@@ -80,17 +270,57 @@ export default function Signup() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <div className='mx-auto w-[350px] space-y-6'>
+          <div className='mx-auto w-full max-w-md space-y-6'>
             <div className='space-y-2 text-center'>
-              <h1 className='text-3xl font-bold'>Crie sua conta</h1>
-              <p className='text-muted-foreground'>
+              <h1 className='text-3xl font-bold text-gray-900 dark:text-white'>
+                Crie sua conta
+              </h1>
+              <p className='text-gray-600 dark:text-gray-300'>
                 Já tem uma conta?{' '}
-                <Link href='/login' className='text-blue-600 hover:underline'>
+                <Link
+                  href='/login'
+                  className='text-blue-600 dark:text-blue-400 hover:underline'
+                >
                   Entrar
                 </Link>
               </p>
             </div>
+
             <form className='space-y-4' onSubmit={handleSubmit}>
+              <div className='space-y-2'>
+                <p className='text-sm font-medium text-gray-700 dark:text-gray-300'>
+                  Tipo de conta
+                </p>
+                <div className='flex gap-4'>
+                  <label className='flex items-center space-x-2'>
+                    <input
+                      type='radio'
+                      name='userType'
+                      value='CLIENT'
+                      checked={formData.userType === 'CLIENT'}
+                      onChange={handleChange}
+                      className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600'
+                    />
+                    <span className='text-sm text-gray-700 dark:text-gray-300'>
+                      Cliente
+                    </span>
+                  </label>
+                  <label className='flex items-center space-x-2'>
+                    <input
+                      type='radio'
+                      name='userType'
+                      value='PROVIDER'
+                      checked={formData.userType === 'PROVIDER'}
+                      onChange={handleChange}
+                      className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600'
+                    />
+                    <span className='text-sm text-gray-700 dark:text-gray-300'>
+                      Prestador de Serviços
+                    </span>
+                  </label>
+                </div>
+              </div>
+
               <AnimatedInput
                 label='Nome completo'
                 name='name'
@@ -110,6 +340,43 @@ export default function Signup() {
                 required
               />
 
+              {formData.userType === 'PROVIDER' ? (
+                <div className='space-y-2'>
+                  <p className='text-sm font-medium text-gray-700 dark:text-gray-300'>
+                    Tipo de documento
+                  </p>
+                  <RadioGroup
+                    value={formData.documentType}
+                    onValueChange={handleDocumentTypeChange}
+                    className='flex space-x-4'
+                  >
+                    <div className='flex items-center space-x-2'>
+                      <RadioGroupItem value='CPF' id='cpf' />
+                      <Label htmlFor='cpf'>CPF</Label>
+                    </div>
+                    <div className='flex items-center space-x-2'>
+                      <RadioGroupItem value='CNPJ' id='cnpj' />
+                      <Label htmlFor='cnpj'>CNPJ</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+              ) : null}
+
+              <AnimatedInput
+                label={formData.documentType}
+                name='document'
+                value={formData.document}
+                onChange={handleDocumentChange}
+                error={errors.document}
+                placeholder={
+                  formData.documentType === 'CPF'
+                    ? '000.000.000-00'
+                    : '00.000.000/0000-00'
+                }
+                maxLength={formData.documentType === 'CPF' ? 14 : 18}
+                required
+              />
+
               <AnimatedInput
                 label='Senha'
                 name='password'
@@ -119,10 +386,6 @@ export default function Signup() {
                 error={errors.password}
                 required
               />
-              <p className='text-xs text-gray-500 -mt-2'>
-                A senha deve ter pelo menos 8 caracteres, incluindo letras e
-                números
-              </p>
 
               <AnimatedInput
                 label='Confirmar senha'
@@ -148,19 +411,19 @@ export default function Signup() {
                 />
                 <label
                   htmlFor='terms'
-                  className='text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70'
+                  className='text-sm font-normal leading-none text-gray-700 dark:text-gray-300 peer-disabled:cursor-not-allowed peer-disabled:opacity-70'
                 >
                   Eu concordo com os{' '}
                   <Link
                     href='/termos'
-                    className='text-blue-600 hover:underline'
+                    className='text-blue-600 dark:text-blue-400 hover:underline'
                   >
                     Termos de Serviço
                   </Link>{' '}
                   e{' '}
                   <Link
                     href='/privacidade'
-                    className='text-blue-600 hover:underline'
+                    className='text-blue-600 dark:text-blue-400 hover:underline'
                   >
                     Política de Privacidade
                   </Link>
@@ -176,9 +439,17 @@ export default function Signup() {
               >
                 <Button
                   type='submit'
-                  className='w-full bg-blue-600 hover:bg-blue-700'
+                  className='w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800'
+                  disabled={isLoading}
                 >
-                  Criar conta
+                  {isLoading ? (
+                    <>
+                      <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                      Criando conta...
+                    </>
+                  ) : (
+                    'Criar conta'
+                  )}
                 </Button>
               </motion.div>
             </form>
@@ -186,7 +457,7 @@ export default function Signup() {
         </motion.div>
 
         <motion.div
-          className='items-center justify-center p-6 lg:flex lg:bg-gradient-to-r lg:from-blue-500 lg:to-blue-700 lg:p-10'
+          className='hidden items-center justify-center p-6 lg:flex lg:bg-gradient-to-r lg:from-blue-600 lg:to-blue-800 lg:p-10 dark:lg:from-blue-900 dark:lg:to-blue-950'
           initial={{ opacity: 0, x: 50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
@@ -194,16 +465,17 @@ export default function Signup() {
           <div className='mx-auto items-center text-center text-white'>
             <Image
               src='/images/logo-transparente.svg'
-              alt='Profissional trabalhando'
-              width={50}
-              height={50}
-              className='w-[300px] h-auto object-cover mx-auto'
+              alt='Logo Facilize'
+              width={300}
+              height={300}
+              className='w-[250px] h-auto object-cover mx-auto'
+              priority
             />
             <h2 className='mt-6 text-3xl font-bold'>
               Simplifique a gestão do seu negócio
             </h2>
             <motion.ul
-              className='mt-8 space-y-4 text-left'
+              className='mt-8 space-y-4 text-left max-w-md mx-auto'
               initial='hidden'
               animate='visible'
               variants={{
@@ -231,7 +503,7 @@ export default function Signup() {
                   }}
                 >
                   <svg
-                    className='mr-2 h-6 w-6 flex-shrink-0 text-white'
+                    className='mr-3 h-6 w-6 flex-shrink-0 text-white'
                     fill='none'
                     stroke='currentColor'
                     viewBox='0 0 24 24'
@@ -244,7 +516,7 @@ export default function Signup() {
                       d='M5 13l4 4L19 7'
                     ></path>
                   </svg>
-                  <span>{item}</span>
+                  <span className='text-lg'>{item}</span>
                 </motion.li>
               ))}
             </motion.ul>
@@ -255,7 +527,8 @@ export default function Signup() {
           </div>
         </motion.div>
       </div>
+
+      <Footer />
     </main>
   )
 }
-
