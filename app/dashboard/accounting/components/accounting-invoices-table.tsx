@@ -22,7 +22,6 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 
-// Sample data
 const invoices = [
   {
     id: 'NF-001',

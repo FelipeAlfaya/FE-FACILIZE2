@@ -19,12 +19,10 @@ export function AppearanceForm() {
     e.preventDefault()
     setIsSubmitting(true)
 
-    // Simulate API call
     setTimeout(() => {
       setIsSubmitting(false)
       setShowSuccess(true)
 
-      // Hide success message after 3 seconds
       setTimeout(() => {
         setShowSuccess(false)
       }, 3000)

@@ -1,4 +1,3 @@
-// components/profile-header.tsx
 'use client'
 
 import { Camera, Edit } from 'lucide-react'
@@ -8,11 +7,10 @@ import { useUser } from '@/context/UserContext'
 import { useState, useRef, ChangeEvent, useEffect } from 'react'
 import { toast } from 'sonner'
 
-// Avatares padrão em base64 (pré-convertidos)
 const defaultAvatars = [
-  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA...', // profile-1 em base64
-  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA...', // profile-2 em base64
-  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA...', // profile-3 em base64
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA...',
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA...',
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA...',
 ]
 
 export function ProfileHeader() {
@@ -24,15 +22,12 @@ export function ProfileHeader() {
   useEffect(() => {
     if (user) {
       if (user.avatar) {
-        // Se o avatar começar com 'data:', já está em base64
         if (user.avatar.startsWith('data:')) {
           setAvatarSrc(user.avatar)
         } else {
-          // Se for uma URL, faz a chamada GET para obter a imagem
           fetchAvatar(user.avatar)
         }
       } else {
-        // Seleciona um avatar padrão aleatório
         const randomIndex = Math.floor(Math.random() * defaultAvatars.length)
         setAvatarSrc(defaultAvatars[randomIndex])
       }

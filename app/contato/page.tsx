@@ -35,7 +35,6 @@ export default function Contato() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    // Lógica de envio do formulário
     console.log('Formulário enviado:', formData)
   }
 

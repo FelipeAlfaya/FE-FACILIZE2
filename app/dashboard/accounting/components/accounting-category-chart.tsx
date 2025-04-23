@@ -10,7 +10,6 @@ import {
 } from 'recharts'
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart'
 
-// Sample data
 const data = [
   { name: 'Consultorias', value: 5500, color: 'hsl(var(--chart-1))' },
   { name: 'Serviços Recorrentes', value: 3200, color: 'hsl(var(--chart-2))' },

@@ -70,12 +70,10 @@ export function PaymentFlow({ onComplete }: PaymentFlowProps) {
     })
     setIsProcessing(true)
 
-    // Simulate payment processing
     setTimeout(() => {
       setIsProcessing(false)
       setIsComplete(true)
       setCurrentStep('confirmation')
-      // Chama onComplete quando o pagamento é concluído
       if (onComplete) onComplete()
     }, 2000)
   }

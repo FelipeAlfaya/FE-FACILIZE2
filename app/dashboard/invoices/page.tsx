@@ -28,7 +28,6 @@ import {
 import Link from 'next/link'
 import { useAuthCheck } from '@/hooks/useAuthCheck'
 
-// Mock data for invoices
 const mockInvoices = [
   {
     id: '1',

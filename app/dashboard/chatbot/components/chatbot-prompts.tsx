@@ -69,13 +69,11 @@ export function ChatbotPrompts() {
   const handleSavePrompts = () => {
     setIsLoading(true)
 
-    // Simulate API call
     setTimeout(() => {
       setIsLoading(false)
       setShowSuccess(true)
       toast.success('Prompts salvos com sucesso!')
 
-      // Hide success message after 3 seconds
       setTimeout(() => {
         setShowSuccess(false)
       }, 3000)

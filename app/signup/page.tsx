@@ -75,7 +75,6 @@ export default function Signup() {
 
     if (cnpj.length !== 14 || /^(\d)\1{13}$/.test(cnpj)) return false
 
-    // Validação do primeiro dígito verificador
     let length = cnpj.length - 2
     let numbers = cnpj.substring(0, length)
     const digits = cnpj.substring(length)
@@ -90,7 +89,6 @@ export default function Signup() {
     let result = sum % 11 < 2 ? 0 : 11 - (sum % 11)
     if (result !== Number.parseInt(digits.charAt(0))) return false
 
-    // Validação do segundo dígito verificador
     length = length + 1
     numbers = cnpj.substring(0, length)
     sum = 0

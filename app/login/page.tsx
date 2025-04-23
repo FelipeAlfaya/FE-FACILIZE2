@@ -93,10 +93,8 @@ export default function Login() {
         throw new Error(data.message || 'Erro ao fazer login')
       }
 
-      // 1. Faz login no contexto (persiste no storage)
       await login(data.access_token, data.user, rememberMe)
 
-      // 2. Redireciona usando window.location para evitar problemas
       window.location.href =
         data.user.type === 'CLIENT' ? '/dashboard/providers' : '/dashboard'
     } catch (error) {

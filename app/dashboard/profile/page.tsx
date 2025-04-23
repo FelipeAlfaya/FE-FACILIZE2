@@ -1,4 +1,3 @@
-// app/dashboard/profile/page.tsx
 import { ProfileHeader } from './components/profile-header'
 import { ProfileForm } from './components/profile-form'
 import { SecurityTab } from './components/security-tab'

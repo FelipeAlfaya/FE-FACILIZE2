@@ -115,7 +115,6 @@ export function ScheduleCalendar() {
     }
   }
 
-  // Function to get dates with appointments for highlighting in calendar
   const getDatesWithAppointments = () => {
     const dates: Record<
       string,

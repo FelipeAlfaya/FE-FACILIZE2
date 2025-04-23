@@ -73,13 +73,11 @@ export function ChatbotSettings() {
   const handleSaveSettings = () => {
     setIsLoading(true)
 
-    // Simulate API call
     setTimeout(() => {
       setIsLoading(false)
       setShowSuccess(true)
       toast.success('Configurações salvas com sucesso!')
 
-      // Hide success message after 3 seconds
       setTimeout(() => {
         setShowSuccess(false)
       }, 3000)

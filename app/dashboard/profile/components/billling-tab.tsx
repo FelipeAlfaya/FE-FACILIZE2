@@ -17,10 +17,8 @@ export function BillingTab() {
 
   const downloadInvoice = (invoiceId: string) => {
     setIsLoading(true)
-    // Simulate API call
     setTimeout(() => {
       setIsLoading(false)
-      // In a real app, this would trigger a file download
       console.log(`Downloading invoice ${invoiceId}`)
     }, 1000)
   }
