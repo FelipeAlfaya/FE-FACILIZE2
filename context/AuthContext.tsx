@@ -10,6 +10,16 @@ type User = {
   description?: string
   createdAt: string
   updatedAt: string
+  avatar?: string
+  phone?: string
+  address?: {
+    street: string
+    number: string
+    neighborhood: string
+    city: string
+    state: string
+    zipCode: string
+  }
   client?: {
     id: number
     userId: number

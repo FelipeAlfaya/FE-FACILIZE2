@@ -20,6 +20,13 @@ import {
 } from '../dashboard/payment/components/payment-flow'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 export default function Signup() {
   const router = useRouter()
@@ -32,16 +39,81 @@ export default function Signup() {
     userType: 'CLIENT',
     documentType: 'CPF', // Default to CPF
     terms: false,
+    // Provider specific fields
+    address: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    specialty: '',
+    customSpecialty: '', // For when "Outro" is selected
   })
   const [showPaymentFlow, setShowPaymentFlow] = useState(false)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
   const [isLoading, setIsLoading] = useState(false)
+  const [currentStep, setCurrentStep] = useState(1)
+
+  // List of specialties for providers
+  const specialties = [
+    'Advogado',
+    'Contador',
+    'Consultor Financeiro',
+    'Designer',
+    'Desenvolvedor',
+    'Fotógrafo',
+    'Médico',
+    'Nutricionista',
+    'Psicólogo',
+    'Terapeuta',
+    'Outro',
+  ]
+
+  // List of Brazilian states
+  const brazilianStates = [
+    'AC',
+    'AL',
+    'AP',
+    'AM',
+    'BA',
+    'CE',
+    'DF',
+    'ES',
+    'GO',
+    'MA',
+    'MT',
+    'MS',
+    'MG',
+    'PA',
+    'PB',
+    'PR',
+    'PE',
+    'PI',
+    'RJ',
+    'RN',
+    'RS',
+    'RO',
+    'RR',
+    'SC',
+    'SP',
+    'SE',
+    'TO',
+  ]
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target
     setFormData((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
+    }))
+  }
+
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+      // Reset customSpecialty if specialty is not "Outro"
+      ...(name === 'specialty' && value !== 'Outro'
+        ? { customSpecialty: '' }
+        : {}),
     }))
   }
 
@@ -105,10 +177,12 @@ export default function Signup() {
     return true
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+  const validateZipCode = (zipCode: string) => {
+    const regex = /^\d{5}-?\d{3}$/
+    return regex.test(zipCode)
+  }
 
+  const validateStep1 = () => {
     const newErrors: { [key: string]: string } = {}
 
     if (!formData.name) {
@@ -149,11 +223,65 @@ export default function Signup() {
       newErrors.terms = 'Você deve aceitar os termos'
     }
 
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors)
-      setIsLoading(false)
-      return
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const validateStep2 = () => {
+    const newErrors: { [key: string]: string } = {}
+
+    if (!formData.address) {
+      newErrors.address = 'Endereço é obrigatório'
     }
+
+    if (!formData.city) {
+      newErrors.city = 'Cidade é obrigatória'
+    }
+
+    if (!formData.state) {
+      newErrors.state = 'Estado é obrigatório'
+    }
+
+    if (!formData.zipCode) {
+      newErrors.zipCode = 'CEP é obrigatório'
+    } else if (!validateZipCode(formData.zipCode)) {
+      newErrors.zipCode = 'CEP inválido'
+    }
+
+    if (!formData.specialty) {
+      newErrors.specialty = 'Especialidade é obrigatória'
+    }
+
+    if (formData.specialty === 'Outro' && !formData.customSpecialty) {
+      newErrors.customSpecialty = 'Especialidade personalizada é obrigatória'
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleNextStep = () => {
+    if (currentStep === 1) {
+      if (validateStep1()) {
+        if (formData.userType === 'PROVIDER') {
+          setCurrentStep(2)
+        } else {
+          handleSubmit()
+        }
+      }
+    } else if (currentStep === 2) {
+      if (validateStep2()) {
+        handleSubmit()
+      }
+    }
+  }
+
+  const handlePrevStep = () => {
+    setCurrentStep(1)
+  }
+
+  const handleSubmit = async () => {
+    setIsLoading(true)
 
     const requestData = {
       email: formData.email,
@@ -163,6 +291,16 @@ export default function Signup() {
       ...(formData.documentType === 'CPF'
         ? { cpf: formatDocument(formData.document) }
         : { cnpj: formatDocument(formData.document) }),
+      ...(formData.userType === 'PROVIDER' && {
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        zipCode: formData.zipCode.replace('-', ''),
+        specialty:
+          formData.specialty === 'Outro'
+            ? formData.customSpecialty
+            : formData.specialty,
+      }),
     }
 
     console.log('Enviando dados:', JSON.stringify(requestData, null, 2))
@@ -226,11 +364,27 @@ export default function Signup() {
     }
   }
 
+  const formatZipCode = (value: string) => {
+    const numericValue = value.replace(/\D/g, '')
+    return numericValue
+      .slice(0, 8)
+      .replace(/(\d{5})(\d)/, '$1-$2')
+      .replace(/(-\d{3})\d+?$/, '$1')
+  }
+
   const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formattedValue = formatCPForCNPJ(e.target.value)
     setFormData((prev) => ({
       ...prev,
       document: formattedValue,
+    }))
+  }
+
+  const handleZipCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formattedValue = formatZipCode(e.target.value)
+    setFormData((prev) => ({
+      ...prev,
+      zipCode: formattedValue,
     }))
   }
 
@@ -284,173 +438,311 @@ export default function Signup() {
               </p>
             </div>
 
-            <form className='space-y-4' onSubmit={handleSubmit}>
-              <div className='space-y-2'>
-                <p className='text-sm font-medium text-gray-700 dark:text-gray-300'>
-                  Tipo de conta
-                </p>
-                <div className='flex gap-4'>
-                  <label className='flex items-center space-x-2'>
-                    <input
-                      type='radio'
-                      name='userType'
-                      value='CLIENT'
-                      checked={formData.userType === 'CLIENT'}
-                      onChange={handleChange}
-                      className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600'
-                    />
-                    <span className='text-sm text-gray-700 dark:text-gray-300'>
-                      Cliente
-                    </span>
-                  </label>
-                  <label className='flex items-center space-x-2'>
-                    <input
-                      type='radio'
-                      name='userType'
-                      value='PROVIDER'
-                      checked={formData.userType === 'PROVIDER'}
-                      onChange={handleChange}
-                      className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600'
-                    />
-                    <span className='text-sm text-gray-700 dark:text-gray-300'>
-                      Prestador de Serviços
-                    </span>
-                  </label>
-                </div>
-              </div>
-
-              <AnimatedInput
-                label='Nome completo'
-                name='name'
-                value={formData.name}
-                onChange={handleChange}
-                error={errors.name}
-                required
-              />
-
-              <AnimatedInput
-                label='Email'
-                name='email'
-                type='email'
-                value={formData.email}
-                onChange={handleChange}
-                error={errors.email}
-                required
-              />
-
-              {formData.userType === 'PROVIDER' ? (
+            {currentStep === 1 ? (
+              <form className='space-y-4'>
                 <div className='space-y-2'>
                   <p className='text-sm font-medium text-gray-700 dark:text-gray-300'>
-                    Tipo de documento
+                    Tipo de conta
                   </p>
-                  <RadioGroup
-                    value={formData.documentType}
-                    onValueChange={handleDocumentTypeChange}
-                    className='flex space-x-4'
-                  >
-                    <div className='flex items-center space-x-2'>
-                      <RadioGroupItem value='CPF' id='cpf' />
-                      <Label htmlFor='cpf'>CPF</Label>
-                    </div>
-                    <div className='flex items-center space-x-2'>
-                      <RadioGroupItem value='CNPJ' id='cnpj' />
-                      <Label htmlFor='cnpj'>CNPJ</Label>
-                    </div>
-                  </RadioGroup>
+                  <div className='flex gap-4'>
+                    <label className='flex items-center space-x-2'>
+                      <input
+                        type='radio'
+                        name='userType'
+                        value='CLIENT'
+                        checked={formData.userType === 'CLIENT'}
+                        onChange={handleChange}
+                        className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600'
+                      />
+                      <span className='text-sm text-gray-700 dark:text-gray-300'>
+                        Cliente
+                      </span>
+                    </label>
+                    <label className='flex items-center space-x-2'>
+                      <input
+                        type='radio'
+                        name='userType'
+                        value='PROVIDER'
+                        checked={formData.userType === 'PROVIDER'}
+                        onChange={handleChange}
+                        className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600'
+                      />
+                      <span className='text-sm text-gray-700 dark:text-gray-300'>
+                        Prestador de Serviços
+                      </span>
+                    </label>
+                  </div>
                 </div>
-              ) : null}
 
-              <AnimatedInput
-                label={formData.documentType}
-                name='document'
-                value={formData.document}
-                onChange={handleDocumentChange}
-                error={errors.document}
-                placeholder={
-                  formData.documentType === 'CPF'
-                    ? '000.000.000-00'
-                    : '00.000.000/0000-00'
-                }
-                maxLength={formData.documentType === 'CPF' ? 14 : 18}
-                required
-              />
-
-              <AnimatedInput
-                label='Senha'
-                name='password'
-                type='password'
-                value={formData.password}
-                onChange={handleChange}
-                error={errors.password}
-                required
-              />
-
-              <AnimatedInput
-                label='Confirmar senha'
-                name='confirmPassword'
-                type='password'
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                error={errors.confirmPassword}
-                required
-              />
-
-              <div className='flex items-start space-x-2 pt-2'>
-                <Checkbox
-                  id='terms'
-                  name='terms'
-                  checked={formData.terms}
-                  onCheckedChange={(checked) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      terms: checked === true,
-                    }))
-                  }
+                <AnimatedInput
+                  label='Nome completo'
+                  name='name'
+                  value={formData.name}
+                  onChange={handleChange}
+                  error={errors.name}
+                  required
                 />
-                <label
-                  htmlFor='terms'
-                  className='text-sm font-normal leading-none text-gray-700 dark:text-gray-300 peer-disabled:cursor-not-allowed peer-disabled:opacity-70'
-                >
-                  Eu concordo com os{' '}
-                  <Link
-                    href='/termos'
-                    className='text-blue-600 dark:text-blue-400 hover:underline'
-                  >
-                    Termos de Serviço
-                  </Link>{' '}
-                  e{' '}
-                  <Link
-                    href='/privacidade'
-                    className='text-blue-600 dark:text-blue-400 hover:underline'
-                  >
-                    Política de Privacidade
-                  </Link>
-                </label>
-              </div>
-              {errors.terms && (
-                <p className='text-xs text-red-500'>{errors.terms}</p>
-              )}
 
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Button
-                  type='submit'
-                  className='w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800'
-                  disabled={isLoading}
+                <AnimatedInput
+                  label='Email'
+                  name='email'
+                  type='email'
+                  value={formData.email}
+                  onChange={handleChange}
+                  error={errors.email}
+                  required
+                />
+
+                {formData.userType === 'PROVIDER' ? (
+                  <div className='space-y-2'>
+                    <p className='text-sm font-medium text-gray-700 dark:text-gray-300'>
+                      Tipo de documento
+                    </p>
+                    <RadioGroup
+                      value={formData.documentType}
+                      onValueChange={handleDocumentTypeChange}
+                      className='flex space-x-4'
+                    >
+                      <div className='flex items-center space-x-2'>
+                        <RadioGroupItem value='CPF' id='cpf' />
+                        <Label htmlFor='cpf'>CPF</Label>
+                      </div>
+                      <div className='flex items-center space-x-2'>
+                        <RadioGroupItem value='CNPJ' id='cnpj' />
+                        <Label htmlFor='cnpj'>CNPJ</Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                ) : null}
+
+                <AnimatedInput
+                  label={formData.documentType}
+                  name='document'
+                  value={formData.document}
+                  onChange={handleDocumentChange}
+                  error={errors.document}
+                  placeholder={
+                    formData.documentType === 'CPF'
+                      ? '000.000.000-00'
+                      : '00.000.000/0000-00'
+                  }
+                  maxLength={formData.documentType === 'CPF' ? 14 : 18}
+                  required
+                />
+
+                <AnimatedInput
+                  label='Senha'
+                  name='password'
+                  type='password'
+                  value={formData.password}
+                  onChange={handleChange}
+                  error={errors.password}
+                  required
+                />
+
+                <AnimatedInput
+                  label='Confirmar senha'
+                  name='confirmPassword'
+                  type='password'
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  error={errors.confirmPassword}
+                  required
+                />
+
+                <div className='flex items-start space-x-2 pt-2'>
+                  <Checkbox
+                    id='terms'
+                    name='terms'
+                    checked={formData.terms}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        terms: checked === true,
+                      }))
+                    }
+                  />
+                  <label
+                    htmlFor='terms'
+                    className='text-sm font-normal leading-none text-gray-700 dark:text-gray-300 peer-disabled:cursor-not-allowed peer-disabled:opacity-70'
+                  >
+                    Eu concordo com os{' '}
+                    <Link
+                      href='/legal'
+                      className='text-blue-600 dark:text-blue-400 hover:underline'
+                    >
+                      Termos de Serviço
+                    </Link>{' '}
+                    e{' '}
+                    <Link
+                      href='/legal'
+                      className='text-blue-600 dark:text-blue-400 hover:underline'
+                    >
+                      Política de Privacidade
+                    </Link>
+                  </label>
+                </div>
+                {errors.terms && (
+                  <p className='text-xs text-red-500'>{errors.terms}</p>
+                )}
+
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                 >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                      Criando conta...
-                    </>
-                  ) : (
-                    'Criar conta'
+                  <Button
+                    type='button'
+                    onClick={handleNextStep}
+                    className='w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800'
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                        Processando...
+                      </>
+                    ) : formData.userType === 'PROVIDER' ? (
+                      'Próximo'
+                    ) : (
+                      'Criar conta'
+                    )}
+                  </Button>
+                </motion.div>
+              </form>
+            ) : (
+              <form className='space-y-4'>
+                <div className='text-sm font-medium text-gray-700 dark:text-gray-300 mb-4'>
+                  Informações adicionais para prestadores de serviço
+                </div>
+
+                <AnimatedInput
+                  label='Endereço'
+                  name='address'
+                  value={formData.address}
+                  onChange={handleChange}
+                  error={errors.address}
+                  required
+                />
+
+                <AnimatedInput
+                  label='Cidade'
+                  name='city'
+                  value={formData.city}
+                  onChange={handleChange}
+                  error={errors.city}
+                  required
+                />
+
+                <div className='space-y-2'>
+                  <Label htmlFor='state'>Estado</Label>
+                  <Select
+                    value={formData.state}
+                    onValueChange={(value) =>
+                      handleSelectChange('state', value)
+                    }
+                  >
+                    <SelectTrigger
+                      id='state'
+                      className={errors.state ? 'border-red-500' : ''}
+                    >
+                      <SelectValue placeholder='Selecione um estado' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {brazilianStates.map((state) => (
+                        <SelectItem key={state} value={state}>
+                          {state}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.state && (
+                    <p className='text-xs text-red-500'>{errors.state}</p>
                   )}
-                </Button>
-              </motion.div>
-            </form>
+                </div>
+
+                <AnimatedInput
+                  label='CEP'
+                  name='zipCode'
+                  value={formData.zipCode}
+                  onChange={handleZipCodeChange}
+                  error={errors.zipCode}
+                  placeholder='00000-000'
+                  maxLength={9}
+                  required
+                />
+
+                <div className='space-y-2'>
+                  <Label htmlFor='specialty'>Especialidade</Label>
+                  <Select
+                    value={formData.specialty}
+                    onValueChange={(value) =>
+                      handleSelectChange('specialty', value)
+                    }
+                  >
+                    <SelectTrigger
+                      id='specialty'
+                      className={errors.specialty ? 'border-red-500' : ''}
+                    >
+                      <SelectValue placeholder='Selecione uma especialidade' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {specialties.map((specialty) => (
+                        <SelectItem key={specialty} value={specialty}>
+                          {specialty}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.specialty && (
+                    <p className='text-xs text-red-500'>{errors.specialty}</p>
+                  )}
+                </div>
+
+                {formData.specialty === 'Outro' && (
+                  <AnimatedInput
+                    label='Especialidade personalizada'
+                    name='customSpecialty'
+                    value={formData.customSpecialty}
+                    onChange={handleChange}
+                    error={errors.customSpecialty}
+                    placeholder='Digite sua especialidade'
+                    required
+                  />
+                )}
+
+                <div className='flex gap-4 pt-4'>
+                  <Button
+                    type='button'
+                    onClick={handlePrevStep}
+                    variant='outline'
+                    className='flex-1'
+                  >
+                    Voltar
+                  </Button>
+                  <motion.div
+                    className='flex-1'
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Button
+                      type='button'
+                      onClick={handleNextStep}
+                      className='w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800'
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                          Criando conta...
+                        </>
+                      ) : (
+                        'Criar conta'
+                      )}
+                    </Button>
+                  </motion.div>
+                </div>
+              </form>
+            )}
           </div>
         </motion.div>
 

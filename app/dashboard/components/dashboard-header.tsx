@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
   Bell,
@@ -32,6 +32,7 @@ import { useTheme } from 'next-themes'
 import Image from 'next/image'
 import { useAuth } from '@/context/AuthContext'
 import { useRouter } from 'next/navigation'
+import { avatar1, avatar2, avatar3 } from '../common/default-avatars'
 
 type Notification = {
   id: string
@@ -72,9 +73,12 @@ const mockNotifications: Notification[] = [
   },
 ]
 
+const defaultAvatars: string[] = [...avatar1, ...avatar2, ...avatar3]
+
 export function DashboardHeader() {
   const [notifications, setNotifications] =
     useState<Notification[]>(mockNotifications)
+  const [avatarSrc, setAvatarSrc] = useState<string>('')
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const { theme, setTheme } = useTheme()
   const { user } = useAuth()
@@ -82,9 +86,58 @@ export function DashboardHeader() {
 
   const unreadCount = notifications.filter((n) => !n.read).length
 
+  useEffect(() => {
+    if (user) {
+      if (user.avatar) {
+        if (user.avatar.startsWith('data:')) {
+          setAvatarSrc(user.avatar)
+        } else {
+          fetchAvatar(user.avatar)
+        }
+      } else {
+        const randomIndex = Math.floor(Math.random() * defaultAvatars.length)
+        setAvatarSrc(defaultAvatars[randomIndex])
+      }
+    }
+  }, [user])
+
+  const fetchAvatar = async (avatarUrl: string) => {
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}${avatarUrl.replace(/^\/+/, '')}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        }
+      )
+
+      if (response.ok) {
+        const blob = await response.blob()
+        const reader = new FileReader()
+        reader.onloadend = () => {
+          setAvatarSrc(reader.result as string)
+        }
+        reader.readAsDataURL(blob)
+      } else {
+        setRandomDefaultAvatar()
+      }
+    } catch (error) {
+      console.error('Error fetching avatar:', error)
+      setRandomDefaultAvatar()
+    }
+  }
+
+  const setRandomDefaultAvatar = () => {
+    const randomIndex = Math.floor(Math.random() * defaultAvatars.length)
+    setAvatarSrc(defaultAvatars[randomIndex])
+  }
+
   const handleLogout = () => {
     localStorage.removeItem('access_token')
     localStorage.removeItem('user')
+    sessionStorage.removeItem('access_token')
+    sessionStorage.removeItem('user')
     router.push('/login')
   }
 
@@ -244,9 +297,10 @@ export function DashboardHeader() {
             <DropdownMenuTrigger asChild>
               <Button variant='ghost' size='icon' className='rounded-full'>
                 <img
-                  src='/placeholder.svg?height=32&width=32'
+                  src={avatarSrc || '/placeholder.svg?height=32&width=32'}
                   alt='Avatar'
-                  className='rounded-full'
+                  className='rounded-full w-8 h-8 object-cover'
+                  onError={() => setRandomDefaultAvatar()}
                 />
               </Button>
             </DropdownMenuTrigger>

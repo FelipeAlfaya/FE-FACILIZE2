@@ -27,6 +27,7 @@ interface UserData {
       name: string
       price: number
     }
+    specialty: string
   }
   client?: {
     id: number
@@ -63,9 +64,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
   })
 
   const handleTokenExpired = () => {
-    // Remove o token expirado
     localStorage.removeItem('access_token')
-    // Redireciona para a página de login
+    sessionStorage.removeItem('access_token')
     router.push('/login')
   }
 
@@ -73,7 +73,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
     try {
       setState((prev) => ({ ...prev, loading: true, error: null }))
 
-      const token = localStorage.getItem('access_token')
+      const token =
+        localStorage.getItem('access_token') ||
+        sessionStorage.getItem('access_token')
       if (!token) {
         throw new Error('Token não encontrado')
       }

@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Menu, Moon, Sun, X } from 'lucide-react'
+import { Menu, Moon, Sun, X, LogOut, LayoutDashboard } from 'lucide-react'
 import Image from 'next/image'
 import { useTheme } from 'next-themes'
+import { useRouter } from 'next/navigation'
 
 interface HeaderProps {
   showProfile?: boolean
@@ -14,10 +15,25 @@ interface HeaderProps {
 
 export default function Header({ showProfile = false }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const { theme, setTheme } = useTheme()
+  const router = useRouter()
+
+  useEffect(() => {
+    // Verifica se há token no localStorage quando o componente monta
+    const token = localStorage.getItem('access_token')
+    setIsAuthenticated(!!token)
+  }, [])
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark')
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('access_token')
+    localStorage.removeItem('user')
+    setIsAuthenticated(false)
+    router.push('/')
   }
 
   return (
@@ -68,11 +84,23 @@ export default function Header({ showProfile = false }: HeaderProps) {
               </Link>
             </nav>
 
-            {showProfile ? (
-              <Avatar>
-                <AvatarImage src='/images/avatar.jpg' />
-                <AvatarFallback>US</AvatarFallback>
-              </Avatar>
+            {isAuthenticated ? (
+              <div className='flex items-center space-x-4'>
+                <Link href='/dashboard'>
+                  <Button variant='outline' className='flex items-center'>
+                    <LayoutDashboard className='h-4 w-4 mr-2' />
+                    Dashboard
+                  </Button>
+                </Link>
+                <Button
+                  variant='ghost'
+                  onClick={handleLogout}
+                  className='flex items-center'
+                >
+                  <LogOut className='h-4 w-4 mr-2' />
+                  Sair
+                </Button>
+              </div>
             ) : (
               <Link href='/login'>
                 <Button className='bg-blue-600 hover:bg-blue-700'>
@@ -138,7 +166,28 @@ export default function Header({ showProfile = false }: HeaderProps) {
               Contato
             </Link>
 
-            {!showProfile && (
+            {isAuthenticated ? (
+              <>
+                <Link
+                  href='/dashboard'
+                  className='block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 flex items-center'
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <LayoutDashboard className='h-4 w-4 mr-2' />
+                  Dashboard
+                </Link>
+                <button
+                  onClick={() => {
+                    handleLogout()
+                    setIsMenuOpen(false)
+                  }}
+                  className='w-full text-left block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 flex items-center'
+                >
+                  <LogOut className='h-4 w-4 mr-2' />
+                  Sair
+                </button>
+              </>
+            ) : (
               <Link
                 href='/login'
                 className='block px-3 py-2 rounded-md text-base font-medium bg-blue-600 text-white hover:bg-blue-700'

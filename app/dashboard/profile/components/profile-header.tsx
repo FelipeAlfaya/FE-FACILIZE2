@@ -35,13 +35,16 @@ export function ProfileHeader() {
   }, [user])
 
   const fetchAvatar = async (avatarUrl: string) => {
+    const token =
+      localStorage.getItem('access_token') ||
+      sessionStorage.getItem('access_token')
     try {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}${avatarUrl.replace(/^\/+/, '')}`,
         {
           method: 'GET',
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            Authorization: `Bearer ${token}`,
           },
         }
       )
@@ -155,15 +158,23 @@ export function ProfileHeader() {
       <h1 className='text-2xl font-bold mt-4'>{user.name}</h1>
       <p className='text-gray-600'>{user.email}</p>
 
-      {user.provider?.plan && (
+      {user.type === 'PROVIDER' && user.provider?.plan && (
         <div className='flex items-center mt-2'>
           <span className='text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full'>
             {user.provider.plan.name}
           </span>
           <Button variant='ghost' size='sm' className='ml-2'>
             <Edit className='h-3 w-3 mr-1' />
-            <Link href='/dashboard/plans'>Change plan</Link>
+            <Link href='/dashboard/plans'>Alterar Plano</Link>
           </Button>
+        </div>
+      )}
+
+      {user.type === 'CLIENT' && (
+        <div className='mt-2'>
+          <span className='text-sm bg-green-100 text-green-800 px-2 py-1 rounded-full'>
+            Cliente
+          </span>
         </div>
       )}
     </div>
