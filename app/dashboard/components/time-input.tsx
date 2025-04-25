@@ -23,7 +23,6 @@ export function TimeInput({
   const [hour, setHour] = useState('09')
   const [minute, setMinute] = useState('00')
 
-  // Parse the initial value
   useEffect(() => {
     if (value) {
       const [h, m] = value.split(':')
@@ -32,17 +31,14 @@ export function TimeInput({
     }
   }, [value])
 
-  // Update the parent component when hour or minute changes
   useEffect(() => {
     onChange(`${hour}:${minute}`)
   }, [hour, minute, onChange])
 
-  // Generate hours (00-23)
   const hours = Array.from({ length: 24 }, (_, i) =>
     i.toString().padStart(2, '0')
   )
 
-  // Generate minutes (00, 15, 30, 45)
   const minutes = ['00', '15', '30', '45']
 
   return (

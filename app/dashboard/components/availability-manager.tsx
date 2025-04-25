@@ -97,16 +97,13 @@ export function AvailabilityManager({
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
   const [selectedDateStr, setSelectedDateStr] = useState<string>('')
 
-  // Fetch provider availability
   useEffect(() => {
     const fetchAvailability = async () => {
       try {
-        // In a real app, you would fetch data from your API
         // const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/providers/${providerId}/availability`)
         // const data = await response.json()
         // setWeeklyAvailability(data.weekly)
         // setSpecificDates(data.specificDates)
-        // Using mock data for now
       } catch (error) {
         console.error('Error fetching availability:', error)
       }
@@ -226,7 +223,6 @@ export function AvailabilityManager({
       //   })
       // })
 
-      // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000))
 
       if (onSave) onSave()

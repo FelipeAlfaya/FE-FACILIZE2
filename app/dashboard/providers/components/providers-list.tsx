@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Search, MapPin, Star, Calendar } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -14,6 +14,14 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ScheduleModal } from '../../schedule/components/schedule.modal'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination'
 
 type Provider = {
   id: string
@@ -23,64 +31,9 @@ type Provider = {
   rating: number
   services: number
   price: number
+  description?: string
+  avatar?: string | null
 }
-
-const mockProviders: Provider[] = [
-  {
-    id: '1',
-    name: 'Felipe da Silva',
-    specialty: 'Contador',
-    location: 'São Paulo, SP',
-    rating: 4.8,
-    services: 230,
-    price: 49.9,
-  },
-  {
-    id: '2',
-    name: 'Ana Oliveira',
-    specialty: 'Advogada',
-    location: 'Rio de Janeiro, RJ',
-    rating: 4.9,
-    services: 187,
-    price: 69.9,
-  },
-  {
-    id: '3',
-    name: 'Carlos Mendes',
-    specialty: 'Consultor Financeiro',
-    location: 'Belo Horizonte, MG',
-    rating: 4.7,
-    services: 156,
-    price: 89.9,
-  },
-  {
-    id: '4',
-    name: 'Mariana Costa',
-    specialty: 'Contadora',
-    location: 'São Paulo, SP',
-    rating: 4.5,
-    services: 120,
-    price: 59.9,
-  },
-  {
-    id: '5',
-    name: 'Roberto Almeida',
-    specialty: 'Advogado Tributário',
-    location: 'Curitiba, PR',
-    rating: 4.6,
-    services: 98,
-    price: 79.9,
-  },
-  {
-    id: '6',
-    name: 'Juliana Santos',
-    specialty: 'Consultora Empresarial',
-    location: 'Porto Alegre, RS',
-    rating: 4.9,
-    services: 145,
-    price: 99.9,
-  },
-]
 
 export function ProvidersList() {
   const [searchTerm, setSearchTerm] = useState('')
@@ -89,12 +42,76 @@ export function ProvidersList() {
     null
   )
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [providers, setProviders] = useState<Provider[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
 
-  const filteredProviders = mockProviders.filter(
+  useEffect(() => {
+    const fetchProviders = async () => {
+      try {
+        setLoading(true)
+        const token =
+          localStorage.getItem('access_token') ||
+          sessionStorage.getItem('access_token')
+
+        if (!token) {
+          throw new Error('No authentication token found')
+        }
+
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}users/providers?page=${currentPage}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        )
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch providers')
+        }
+
+        const data = await response.json()
+
+        const transformedProviders = data.data.map((provider: any) => ({
+          id: provider.id.toString(),
+          name: provider.name,
+          specialty:
+            provider.provider?.specialty || 'Especialidade não informada',
+          location: provider.address
+            ? `${provider.address.city}, ${provider.address.state}`
+            : 'Localização não informada',
+          rating: 4.5,
+          services: provider.provider?.services?.length || 0,
+          price: provider.provider?.services?.[0]?.price || 0,
+          description: provider.provider?.description,
+          avatar: provider.avatar,
+        }))
+
+        setProviders(transformedProviders)
+        setTotalPages(data.meta.last_page)
+        setError(null)
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : 'An unknown error occurred'
+        )
+        console.error('Error fetching providers:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProviders()
+  }, [currentPage])
+
+  const filteredProviders = providers.filter(
     (provider) =>
       provider.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       provider.specialty.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      provider.location.toLowerCase().includes(searchTerm.toLowerCase())
+      (provider.location &&
+        provider.location.toLowerCase().includes(searchTerm.toLowerCase()))
   )
 
   const sortedProviders = [...filteredProviders].sort((a, b) => {
@@ -113,6 +130,28 @@ export function ProvidersList() {
   const handleSchedule = (provider: Provider) => {
     setSelectedProvider(provider)
     setIsModalOpen(true)
+  }
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className='flex justify-center items-center h-64'>
+        <p>Carregando provedores...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className='text-center py-12 text-red-500'>
+        <p>Erro ao carregar provedores: {error}</p>
+      </div>
+    )
   }
 
   return (
@@ -206,11 +245,49 @@ export function ProvidersList() {
         ))}
       </div>
 
-      {sortedProviders.length === 0 && (
+      {sortedProviders.length === 0 && !loading && (
         <div className='text-center py-12'>
           <p className='text-gray-500'>
-            Nenhum provedor encontrado para "{searchTerm}"
+            Nenhum provedor encontrado{' '}
+            {searchTerm ? `para "${searchTerm}"` : ''}
           </p>
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div className='mt-8'>
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                {currentPage > 1 && (
+                  <PaginationPrevious
+                    onClick={() => handlePageChange(currentPage - 1)}
+                  />
+                )}
+              </PaginationItem>
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                (page) => (
+                  <PaginationItem key={page}>
+                    <PaginationLink
+                      isActive={page === currentPage}
+                      onClick={() => handlePageChange(page)}
+                    >
+                      {page}
+                    </PaginationLink>
+                  </PaginationItem>
+                )
+              )}
+
+              <PaginationItem>
+                {currentPage < totalPages && (
+                  <PaginationNext
+                    onClick={() => handlePageChange(currentPage + 1)}
+                  />
+                )}
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       )}
 

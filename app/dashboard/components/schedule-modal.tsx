@@ -36,7 +36,6 @@ type ScheduleModalProps = {
   provider: Provider | null
 }
 
-// Mock provider availability - in a real app, this would come from an API
 const mockAvailability = {
   '2023-05-15': ['09:00', '10:00', '11:00', '14:00', '15:00'],
   '2023-05-16': ['08:00', '09:00', '10:00', '13:00', '14:00'],
@@ -58,18 +57,15 @@ export function ScheduleModal({
   const [availability, setAvailability] =
     useState<Record<string, string[]>>(mockAvailability)
 
-  // Fetch provider availability
   useEffect(() => {
     const fetchAvailability = async () => {
       if (!provider) return
 
       try {
-        // In a real app, you would fetch data from your API
         // const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/providers/${provider.id}/availability`)
         // const data = await response.json()
         // setAvailability(data)
 
-        // Using mock data for now
         setAvailability(mockAvailability)
       } catch (error) {
         console.error('Error fetching provider availability:', error)
@@ -97,12 +93,10 @@ export function ScheduleModal({
 
     setIsSubmitting(true)
 
-    // Simulate API call
     setTimeout(() => {
       setIsSubmitting(false)
       setIsSuccess(true)
 
-      // Reset and close after showing success
       setTimeout(() => {
         setIsSuccess(false)
         setDate(undefined)

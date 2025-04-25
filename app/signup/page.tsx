@@ -2,7 +2,7 @@
 
 import type React from 'react'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -10,14 +10,22 @@ import { Checkbox } from '@/components/ui/checkbox'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
 import AnimatedInput from '@/components/animated-input'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import { toast } from 'sonner'
-import { Loader2 } from 'lucide-react'
 import {
-  PaymentFlow,
-  type PaymentFlowProps,
-} from '../dashboard/payment/components/payment-flow'
+  Loader2,
+  CheckCircle2,
+  ChevronRight,
+  ChevronLeft,
+  User,
+  Building2,
+  Mail,
+  Lock,
+  MapPin,
+  Check,
+  CreditCard,
+} from 'lucide-react'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
 import {
@@ -27,6 +35,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card'
+import { Progress } from '@/components/ui/progress'
+import { Badge } from '@/components/ui/badge'
+
+interface Plan {
+  id: number
+  name: string
+  price: number
+  description: string
+  features: {
+    id: number
+    name: string
+    planId: number
+  }[]
+}
 
 export default function Signup() {
   const router = useRouter()
@@ -35,24 +65,28 @@ export default function Signup() {
     email: '',
     password: '',
     confirmPassword: '',
-    document: '', // CPF ou CNPJ
+    document: '',
     userType: 'CLIENT',
     documentType: 'CPF', // Default to CPF
     terms: false,
-    // Provider specific fields
-    address: '',
+    // Provider
+    street: '',
     city: '',
     state: '',
     zipCode: '',
+    country: 'Brasil',
     specialty: '',
-    customSpecialty: '', // For when "Outro" is selected
+    customSpecialty: '',
   })
   const [showPaymentFlow, setShowPaymentFlow] = useState(false)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
   const [isLoading, setIsLoading] = useState(false)
   const [currentStep, setCurrentStep] = useState(1)
+  const [progress, setProgress] = useState(25)
+  const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null)
+  const [loadingPlans, setLoadingPlans] = useState(false)
+  const [plans, setPlans] = useState<Plan[]>([])
 
-  // List of specialties for providers
   const specialties = [
     'Advogado',
     'Contador',
@@ -67,7 +101,6 @@ export default function Signup() {
     'Outro',
   ]
 
-  // List of Brazilian states
   const brazilianStates = [
     'AC',
     'AL',
@@ -97,6 +130,37 @@ export default function Signup() {
     'SE',
     'TO',
   ]
+
+  useEffect(() => {
+    // Update progress based on current step
+    const totalSteps = formData.userType === 'PROVIDER' ? 5 : 2
+    setProgress((currentStep / totalSteps) * 100)
+  }, [currentStep, formData.userType])
+
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        setLoadingPlans(true)
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}plans`)
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch plans')
+        }
+
+        const data = await response.json()
+        setPlans(data) // A API retorna diretamente o array de planos
+      } catch (error) {
+        toast.error('Failed to load plans')
+        console.error('Error fetching plans:', error)
+      } finally {
+        setLoadingPlans(false)
+      }
+    }
+
+    if (formData.userType === 'PROVIDER' && currentStep === 4) {
+      fetchPlans()
+    }
+  }, [formData.userType, currentStep])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target
@@ -230,24 +294,6 @@ export default function Signup() {
   const validateStep2 = () => {
     const newErrors: { [key: string]: string } = {}
 
-    if (!formData.address) {
-      newErrors.address = 'Endereço é obrigatório'
-    }
-
-    if (!formData.city) {
-      newErrors.city = 'Cidade é obrigatória'
-    }
-
-    if (!formData.state) {
-      newErrors.state = 'Estado é obrigatório'
-    }
-
-    if (!formData.zipCode) {
-      newErrors.zipCode = 'CEP é obrigatório'
-    } else if (!validateZipCode(formData.zipCode)) {
-      newErrors.zipCode = 'CEP inválido'
-    }
-
     if (!formData.specialty) {
       newErrors.specialty = 'Especialidade é obrigatória'
     }
@@ -260,24 +306,73 @@ export default function Signup() {
     return Object.keys(newErrors).length === 0
   }
 
+  const validateStep3 = () => {
+    const newErrors: { [key: string]: string } = {}
+
+    if (formData.userType === 'PROVIDER') {
+      if (!formData.street) {
+        newErrors.street = 'Endereço é obrigatório'
+      }
+      if (!formData.city) {
+        newErrors.city = 'Cidade é obrigatória'
+      }
+      if (!formData.state) {
+        newErrors.state = 'Estado é obrigatório'
+      }
+      if (!formData.zipCode) {
+        newErrors.zipCode = 'CEP é obrigatório'
+      } else if (!validateZipCode(formData.zipCode)) {
+        newErrors.zipCode = 'CEP inválido'
+      }
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const validateStep4 = () => {
+    const newErrors: { [key: string]: string } = {}
+
+    if (!selectedPlanId) {
+      newErrors.plan = 'Selecione um plano para continuar'
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
   const handleNextStep = () => {
     if (currentStep === 1) {
       if (validateStep1()) {
-        if (formData.userType === 'PROVIDER') {
-          setCurrentStep(2)
-        } else {
-          handleSubmit()
-        }
+        setCurrentStep(formData.userType === 'PROVIDER' ? 2 : 5)
       }
     } else if (currentStep === 2) {
       if (validateStep2()) {
-        handleSubmit()
+        setCurrentStep(3)
       }
+    } else if (currentStep === 3) {
+      if (validateStep3()) {
+        setCurrentStep(4)
+      }
+    } else if (currentStep === 4) {
+      if (validateStep4()) {
+        setCurrentStep(5)
+      }
+    } else if (currentStep === 5) {
+      handleSubmit()
     }
   }
 
   const handlePrevStep = () => {
-    setCurrentStep(1)
+    if (currentStep === 2) {
+      setCurrentStep(1)
+    } else if (currentStep === 3) {
+      setCurrentStep(2)
+    } else if (currentStep === 4) {
+      setCurrentStep(3)
+    } else if (currentStep === 5) {
+      setCurrentStep(formData.userType === 'PROVIDER' ? 4 : 1)
+    }
   }
 
   const handleSubmit = async () => {
@@ -292,18 +387,20 @@ export default function Signup() {
         ? { cpf: formatDocument(formData.document) }
         : { cnpj: formatDocument(formData.document) }),
       ...(formData.userType === 'PROVIDER' && {
-        address: formData.address,
-        city: formData.city,
-        state: formData.state,
-        zipCode: formData.zipCode.replace('-', ''),
+        address: {
+          street: formData.street,
+          city: formData.city,
+          state: formData.state,
+          zip: formData.zipCode.replace('-', ''),
+          country: formData.country,
+        },
         specialty:
           formData.specialty === 'Outro'
             ? formData.customSpecialty
             : formData.specialty,
+        planId: selectedPlanId, // Envia o ID do plano selecionado
       }),
     }
-
-    console.log('Enviando dados:', JSON.stringify(requestData, null, 2))
 
     try {
       const response = await fetch(
@@ -333,10 +430,6 @@ export default function Signup() {
     }
   }
 
-  const handlePaymentComplete: PaymentFlowProps['onComplete'] = async () => {
-    // await registerUser()
-  }
-
   const formatDocument = (value: string) => {
     return value.replace(/\D/g, '')
   }
@@ -345,7 +438,6 @@ export default function Signup() {
     const numericValue = value.replace(/\D/g, '')
 
     if (formData.documentType === 'CPF') {
-      // Formatação de CPF (000.000.000-00)
       return numericValue
         .slice(0, 11)
         .replace(/(\d{3})(\d)/, '$1.$2')
@@ -392,8 +484,25 @@ export default function Signup() {
     setFormData((prev) => ({
       ...prev,
       documentType: value,
-      document: '', // Clear document when changing type
+      document: '',
     }))
+  }
+
+  const getStepTitle = () => {
+    switch (currentStep) {
+      case 1:
+        return 'Informações Básicas'
+      case 2:
+        return 'Especialidade Profissional'
+      case 3:
+        return 'Endereço Profissional'
+      case 4:
+        return 'Escolha do Plano'
+      case 5:
+        return 'Finalizar Cadastro'
+      default:
+        return 'Criar Conta'
+    }
   }
 
   if (showPaymentFlow) {
@@ -404,7 +513,7 @@ export default function Signup() {
           <h1 className='text-2xl font-bold mb-8 text-center'>
             Escolha seu plano de assinatura
           </h1>
-          <PaymentFlow onComplete={handlePaymentComplete} />
+          {/* Payment flow component would go here */}
         </div>
         <Footer />
       </main>
@@ -415,357 +524,661 @@ export default function Signup() {
     <main className='min-h-screen bg-gray-50 dark:bg-gray-900'>
       <Header />
 
-      <div className='w-full gap-10 lg:grid lg:min-h-[600px] lg:grid-cols-2 lg:gap-0 xl:min-h-[800px]'>
-        <motion.div
-          className='flex items-center justify-center p-6 xl:p-10'
-          initial={{ opacity: 0, x: -50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <div className='mx-auto w-full max-w-md space-y-6'>
-            <div className='space-y-2 text-center'>
-              <h1 className='text-3xl font-bold text-gray-900 dark:text-white'>
+      <div className='container max-w-7xl mx-auto px-4 py-8 md:py-12'>
+        {/* Progress bar */}
+        <div className='max-w-md mx-auto mb-8'>
+          <div className='flex justify-between mb-2'>
+            <span className='text-sm font-medium'>{getStepTitle()}</span>
+            <span className='text-sm font-medium'>{Math.round(progress)}%</span>
+          </div>
+          <Progress value={progress} className='h-2' />
+        </div>
+
+        <div className='grid md:grid-cols-2 gap-8 items-center'>
+          {/* Form Column */}
+          <motion.div
+            className='bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 md:p-8'
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className='mb-6 text-center'>
+              <h1 className='text-2xl md:text-3xl font-bold text-gray-900 dark:text-white'>
                 Crie sua conta
               </h1>
-              <p className='text-gray-600 dark:text-gray-300'>
+              <p className='mt-2 text-gray-600 dark:text-gray-300'>
                 Já tem uma conta?{' '}
                 <Link
                   href='/login'
-                  className='text-blue-600 dark:text-blue-400 hover:underline'
+                  className='text-blue-600 dark:text-blue-400 hover:underline font-medium'
                 >
                   Entrar
                 </Link>
               </p>
             </div>
 
-            {currentStep === 1 ? (
-              <form className='space-y-4'>
-                <div className='space-y-2'>
-                  <p className='text-sm font-medium text-gray-700 dark:text-gray-300'>
-                    Tipo de conta
-                  </p>
-                  <div className='flex gap-4'>
-                    <label className='flex items-center space-x-2'>
-                      <input
-                        type='radio'
-                        name='userType'
-                        value='CLIENT'
-                        checked={formData.userType === 'CLIENT'}
-                        onChange={handleChange}
-                        className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600'
-                      />
-                      <span className='text-sm text-gray-700 dark:text-gray-300'>
-                        Cliente
-                      </span>
-                    </label>
-                    <label className='flex items-center space-x-2'>
-                      <input
-                        type='radio'
-                        name='userType'
-                        value='PROVIDER'
-                        checked={formData.userType === 'PROVIDER'}
-                        onChange={handleChange}
-                        className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600'
-                      />
-                      <span className='text-sm text-gray-700 dark:text-gray-300'>
-                        Prestador de Serviços
-                      </span>
-                    </label>
-                  </div>
-                </div>
-
-                <AnimatedInput
-                  label='Nome completo'
-                  name='name'
-                  value={formData.name}
-                  onChange={handleChange}
-                  error={errors.name}
-                  required
-                />
-
-                <AnimatedInput
-                  label='Email'
-                  name='email'
-                  type='email'
-                  value={formData.email}
-                  onChange={handleChange}
-                  error={errors.email}
-                  required
-                />
-
-                {formData.userType === 'PROVIDER' ? (
-                  <div className='space-y-2'>
-                    <p className='text-sm font-medium text-gray-700 dark:text-gray-300'>
-                      Tipo de documento
-                    </p>
-                    <RadioGroup
-                      value={formData.documentType}
-                      onValueChange={handleDocumentTypeChange}
-                      className='flex space-x-4'
-                    >
-                      <div className='flex items-center space-x-2'>
-                        <RadioGroupItem value='CPF' id='cpf' />
-                        <Label htmlFor='cpf'>CPF</Label>
-                      </div>
-                      <div className='flex items-center space-x-2'>
-                        <RadioGroupItem value='CNPJ' id='cnpj' />
-                        <Label htmlFor='cnpj'>CNPJ</Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
-                ) : null}
-
-                <AnimatedInput
-                  label={formData.documentType}
-                  name='document'
-                  value={formData.document}
-                  onChange={handleDocumentChange}
-                  error={errors.document}
-                  placeholder={
-                    formData.documentType === 'CPF'
-                      ? '000.000.000-00'
-                      : '00.000.000/0000-00'
-                  }
-                  maxLength={formData.documentType === 'CPF' ? 14 : 18}
-                  required
-                />
-
-                <AnimatedInput
-                  label='Senha'
-                  name='password'
-                  type='password'
-                  value={formData.password}
-                  onChange={handleChange}
-                  error={errors.password}
-                  required
-                />
-
-                <AnimatedInput
-                  label='Confirmar senha'
-                  name='confirmPassword'
-                  type='password'
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  error={errors.confirmPassword}
-                  required
-                />
-
-                <div className='flex items-start space-x-2 pt-2'>
-                  <Checkbox
-                    id='terms'
-                    name='terms'
-                    checked={formData.terms}
-                    onCheckedChange={(checked) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        terms: checked === true,
-                      }))
-                    }
-                  />
-                  <label
-                    htmlFor='terms'
-                    className='text-sm font-normal leading-none text-gray-700 dark:text-gray-300 peer-disabled:cursor-not-allowed peer-disabled:opacity-70'
-                  >
-                    Eu concordo com os{' '}
-                    <Link
-                      href='/legal'
-                      className='text-blue-600 dark:text-blue-400 hover:underline'
-                    >
-                      Termos de Serviço
-                    </Link>{' '}
-                    e{' '}
-                    <Link
-                      href='/legal'
-                      className='text-blue-600 dark:text-blue-400 hover:underline'
-                    >
-                      Política de Privacidade
-                    </Link>
-                  </label>
-                </div>
-                {errors.terms && (
-                  <p className='text-xs text-red-500'>{errors.terms}</p>
-                )}
-
+            <AnimatePresence mode='wait'>
+              {currentStep === 1 && (
                 <motion.div
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  key='step1'
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className='space-y-5'
                 >
-                  <Button
-                    type='button'
-                    onClick={handleNextStep}
-                    className='w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800'
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                        Processando...
-                      </>
-                    ) : formData.userType === 'PROVIDER' ? (
-                      'Próximo'
-                    ) : (
-                      'Criar conta'
+                  <div className='bg-blue-100 dark:bg-blue-900/30 rounded-lg p-4 mb-6'>
+                    <p className='text-sm font-medium text-gray-700 dark:text-gray-300'>
+                      Tipo de conta
+                    </p>
+                    <div className='grid grid-cols-2 gap-4 mt-3'>
+                      <Card
+                        className={`cursor-pointer transition-all ${
+                          formData.userType === 'CLIENT'
+                            ? 'ring-2 ring-blue-500 bg-blue-100 dark:bg-blue-900/30'
+                            : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                        }`}
+                        onClick={() =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            userType: 'CLIENT',
+                          }))
+                        }
+                      >
+                        <CardContent className='flex flex-col items-center justify-center p-4'>
+                          <User
+                            className={`h-8 w-8 mb-2 ${
+                              formData.userType === 'CLIENT'
+                                ? 'text-blue-500'
+                                : 'text-gray-400'
+                            }`}
+                          />
+                          <span className='text-sm font-medium'>Cliente</span>
+                        </CardContent>
+                      </Card>
+                      <Card
+                        className={`cursor-pointer transition-all ${
+                          formData.userType === 'PROVIDER'
+                            ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                            : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                        }`}
+                        onClick={() =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            userType: 'PROVIDER',
+                          }))
+                        }
+                      >
+                        <CardContent className='flex flex-col items-center justify-center p-4'>
+                          <Building2
+                            className={`h-8 w-8 mb-2 ${
+                              formData.userType === 'PROVIDER'
+                                ? 'text-blue-500'
+                                : 'text-gray-400'
+                            }`}
+                          />
+                          <span className='text-sm font-medium'>Prestador</span>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </div>
+
+                  <div className='space-y-4'>
+                    <AnimatedInput
+                      label='Nome completo'
+                      name='name'
+                      value={formData.name}
+                      onChange={handleChange}
+                      error={errors.name}
+                      required
+                      icon={<User className='h-4 w-4 text-gray-500' />}
+                    />
+
+                    <AnimatedInput
+                      label='Email'
+                      name='email'
+                      type='email'
+                      value={formData.email}
+                      onChange={handleChange}
+                      error={errors.email}
+                      required
+                      icon={<Mail className='h-4 w-4 text-gray-500' />}
+                    />
+
+                    {formData.userType === 'PROVIDER' && (
+                      <div className='space-y-2'>
+                        <p className='text-sm font-medium text-gray-700 dark:text-gray-300'>
+                          Tipo de documento
+                        </p>
+                        <RadioGroup
+                          value={formData.documentType}
+                          onValueChange={handleDocumentTypeChange}
+                          className='flex space-x-4'
+                        >
+                          <div className='flex items-center space-x-2'>
+                            <RadioGroupItem value='CPF' id='cpf' />
+                            <Label htmlFor='cpf'>CPF</Label>
+                          </div>
+                          <div className='flex items-center space-x-2'>
+                            <RadioGroupItem value='CNPJ' id='cnpj' />
+                            <Label htmlFor='cnpj'>CNPJ</Label>
+                          </div>
+                        </RadioGroup>
+                      </div>
                     )}
-                  </Button>
+
+                    <AnimatedInput
+                      label={formData.documentType}
+                      name='document'
+                      value={formData.document}
+                      onChange={handleDocumentChange}
+                      error={errors.document}
+                      placeholder={
+                        formData.documentType === 'CPF'
+                          ? '000.000.000-00'
+                          : '00.000.000/0000-00'
+                      }
+                      maxLength={formData.documentType === 'CPF' ? 14 : 18}
+                      required
+                    />
+
+                    <AnimatedInput
+                      label='Senha'
+                      name='password'
+                      type='password'
+                      value={formData.password}
+                      onChange={handleChange}
+                      error={errors.password}
+                      required
+                      icon={<Lock className='h-4 w-4 text-gray-500' />}
+                    />
+
+                    <AnimatedInput
+                      label='Confirmar senha'
+                      name='confirmPassword'
+                      type='password'
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      error={errors.confirmPassword}
+                      required
+                      icon={<Lock className='h-4 w-4 text-gray-500' />}
+                    />
+
+                    <div className='flex items-start space-x-2 pt-2'>
+                      <Checkbox
+                        id='terms'
+                        name='terms'
+                        checked={formData.terms}
+                        onCheckedChange={(checked) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            terms: checked === true,
+                          }))
+                        }
+                      />
+                      <label
+                        htmlFor='terms'
+                        className='text-sm font-normal leading-none text-gray-700 dark:text-gray-300 peer-disabled:cursor-not-allowed peer-disabled:opacity-70'
+                      >
+                        Eu concordo com os{' '}
+                        <Link
+                          href='/legal'
+                          className='text-blue-600 dark:text-blue-400 hover:underline'
+                        >
+                          Termos de Serviço
+                        </Link>{' '}
+                        e{' '}
+                        <Link
+                          href='/legal'
+                          className='text-blue-600 dark:text-blue-400 hover:underline'
+                        >
+                          Política de Privacidade
+                        </Link>
+                      </label>
+                    </div>
+                    {errors.terms && (
+                      <p className='text-xs text-red-500'>{errors.terms}</p>
+                    )}
+                  </div>
                 </motion.div>
-              </form>
-            ) : (
-              <form className='space-y-4'>
-                <div className='text-sm font-medium text-gray-700 dark:text-gray-300 mb-4'>
-                  Informações adicionais para prestadores de serviço
-                </div>
+              )}
+              {currentStep === 2 && (
+                <motion.div
+                  key='step2'
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className='space-y-5'
+                >
+                  <div className='space-y-4'>
+                    <div className='space-y-2'>
+                      <Label htmlFor='specialty' className='text-base'>
+                        Especialidade
+                      </Label>
+                      <Select
+                        value={formData.specialty}
+                        onValueChange={(value) =>
+                          handleSelectChange('specialty', value)
+                        }
+                      >
+                        <SelectTrigger
+                          id='specialty'
+                          className={`${
+                            errors.specialty ? 'border-red-500' : ''
+                          } h-12`}
+                        >
+                          <SelectValue placeholder='Selecione sua especialidade' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {specialties.map((specialty) => (
+                            <SelectItem key={specialty} value={specialty}>
+                              {specialty}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {errors.specialty && (
+                        <p className='text-xs text-red-500'>
+                          {errors.specialty}
+                        </p>
+                      )}
+                    </div>
 
-                <AnimatedInput
-                  label='Endereço'
-                  name='address'
-                  value={formData.address}
-                  onChange={handleChange}
-                  error={errors.address}
-                  required
-                />
+                    {formData.specialty === 'Outro' && (
+                      <AnimatedInput
+                        label='Especifique sua especialidade'
+                        name='customSpecialty'
+                        value={formData.customSpecialty}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            customSpecialty: e.target.value,
+                          }))
+                        }
+                        error={errors.customSpecialty}
+                        required
+                      />
+                    )}
+                  </div>
+                </motion.div>
+              )}
+              {currentStep === 3 && (
+                <motion.div
+                  key='step3'
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className='space-y-5'
+                >
+                  <div className='space-y-4'>
+                    <AnimatedInput
+                      label='Endereço completo'
+                      name='street'
+                      value={formData.street}
+                      onChange={handleChange}
+                      error={errors.street}
+                      placeholder='Rua, número, complemento'
+                      required
+                      icon={<MapPin className='h-4 w-4 text-gray-500' />}
+                    />
 
-                <AnimatedInput
-                  label='Cidade'
-                  name='city'
-                  value={formData.city}
-                  onChange={handleChange}
-                  error={errors.city}
-                  required
-                />
+                    <div className='grid grid-cols-2 gap-4'>
+                      <AnimatedInput
+                        label='Cidade'
+                        name='city'
+                        value={formData.city}
+                        onChange={handleChange}
+                        error={errors.city}
+                        required
+                      />
 
-                <div className='space-y-2'>
-                  <Label htmlFor='state'>Estado</Label>
-                  <Select
-                    value={formData.state}
-                    onValueChange={(value) =>
-                      handleSelectChange('state', value)
-                    }
-                  >
-                    <SelectTrigger
-                      id='state'
-                      className={errors.state ? 'border-red-500' : ''}
+                      <div className='space-y-2'>
+                        <Label htmlFor='state'>Estado</Label>
+                        <Select
+                          value={formData.state}
+                          onValueChange={(value) =>
+                            handleSelectChange('state', value)
+                          }
+                        >
+                          <SelectTrigger
+                            id='state'
+                            className={errors.state ? 'border-red-500' : ''}
+                          >
+                            <SelectValue placeholder='Selecione' />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {brazilianStates.map((state) => (
+                              <SelectItem key={state} value={state}>
+                                {state}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {errors.state && (
+                          <p className='text-xs text-red-500'>{errors.state}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <AnimatedInput
+                      label='CEP'
+                      name='zipCode'
+                      value={formData.zipCode}
+                      onChange={handleZipCodeChange}
+                      error={errors.zipCode}
+                      placeholder='00000-000'
+                      maxLength={9}
+                      required
+                    />
+                  </div>
+                </motion.div>
+              )}
+              {currentStep === 4 && (
+                <motion.div
+                  key='step4'
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className='space-y-5'
+                >
+                  <div className='space-y-6'>
+                    <div className='text-center mb-4'>
+                      <h3 className='text-lg font-semibold mb-2'>
+                        Escolha seu plano
+                      </h3>
+                      <p className='text-sm text-gray-500 dark:text-gray-400'>
+                        Selecione o plano que melhor atende às suas necessidades
+                      </p>
+                    </div>
+
+                    {errors.plan && (
+                      <div className='bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-3 rounded-md text-sm text-center'>
+                        {errors.plan}
+                      </div>
+                    )}
+
+                    {loadingPlans ? (
+                      <div className='flex justify-center py-8'>
+                        <Loader2 className='h-8 w-8 animate-spin' />
+                      </div>
+                    ) : (
+                      <div className='flex flex-wrap justify-center gap-4'>
+                        {plans.map((plan) => (
+                          <Card
+                            key={plan.id}
+                            className={`cursor-pointer transition-all h-full flex flex-col ${
+                              selectedPlanId === plan.id
+                                ? 'ring-2 ring-blue-500 bg-blue-100 dark:bg-blue-900/20'
+                                : 'hover:border-blue-300 hover:shadow-md'
+                            }`}
+                            onClick={() => setSelectedPlanId(plan.id)}
+                          >
+                            <CardHeader className='pb-3'>
+                              <CardTitle className='text-lg'>
+                                {plan.name}
+                              </CardTitle>
+                              <CardDescription className='text-sm min-h-[40px]'>
+                                {plan.description}
+                              </CardDescription>
+                            </CardHeader>
+                            <CardContent className='flex-grow pb-4'>
+                              <div className='text-2xl font-bold mb-4'>
+                                R$ {plan.price.toFixed(2).replace('.', ',')}
+                                <span className='text-sm font-normal text-gray-500 dark:text-gray-400'>
+                                  /mês
+                                </span>
+                              </div>
+                              <ul className='space-y-2'>
+                                {plan.features.map((feature) => (
+                                  <li
+                                    key={feature.id}
+                                    className='flex items-start'
+                                  >
+                                    <Check className='h-4 w-4 text-blue-500 mr-2 mt-0.5 flex-shrink-0' />
+                                    <span className='text-sm'>
+                                      {feature.name}
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </CardContent>
+                            <CardFooter className='pt-0'>
+                              <Button
+                                variant={
+                                  selectedPlanId === plan.id
+                                    ? 'default'
+                                    : 'outline'
+                                }
+                                className={`w-full ${
+                                  selectedPlanId === plan.id
+                                    ? 'bg-blue-600 hover:bg-blue-700'
+                                    : ''
+                                }`}
+                                size='sm'
+                              >
+                                {selectedPlanId === plan.id
+                                  ? 'Selecionado'
+                                  : 'Selecionar'}
+                              </Button>
+                            </CardFooter>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className='flex gap-4 mt-6'>
+                    <Button
+                      type='button'
+                      onClick={handlePrevStep}
+                      variant='outline'
+                      className='flex-1'
                     >
-                      <SelectValue placeholder='Selecione um estado' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {brazilianStates.map((state) => (
-                        <SelectItem key={state} value={state}>
-                          {state}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.state && (
-                    <p className='text-xs text-red-500'>{errors.state}</p>
-                  )}
-                </div>
-
-                <AnimatedInput
-                  label='CEP'
-                  name='zipCode'
-                  value={formData.zipCode}
-                  onChange={handleZipCodeChange}
-                  error={errors.zipCode}
-                  placeholder='00000-000'
-                  maxLength={9}
-                  required
-                />
-
-                <div className='space-y-2'>
-                  <Label htmlFor='specialty'>Especialidade</Label>
-                  <Select
-                    value={formData.specialty}
-                    onValueChange={(value) =>
-                      handleSelectChange('specialty', value)
-                    }
-                  >
-                    <SelectTrigger
-                      id='specialty'
-                      className={errors.specialty ? 'border-red-500' : ''}
-                    >
-                      <SelectValue placeholder='Selecione uma especialidade' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {specialties.map((specialty) => (
-                        <SelectItem key={specialty} value={specialty}>
-                          {specialty}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.specialty && (
-                    <p className='text-xs text-red-500'>{errors.specialty}</p>
-                  )}
-                </div>
-
-                {formData.specialty === 'Outro' && (
-                  <AnimatedInput
-                    label='Especialidade personalizada'
-                    name='customSpecialty'
-                    value={formData.customSpecialty}
-                    onChange={handleChange}
-                    error={errors.customSpecialty}
-                    placeholder='Digite sua especialidade'
-                    required
-                  />
-                )}
-
-                <div className='flex gap-4 pt-4'>
-                  <Button
-                    type='button'
-                    onClick={handlePrevStep}
-                    variant='outline'
-                    className='flex-1'
-                  >
-                    Voltar
-                  </Button>
-                  <motion.div
-                    className='flex-1'
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
+                      Voltar
+                    </Button>
                     <Button
                       type='button'
                       onClick={handleNextStep}
-                      className='w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800'
-                      disabled={isLoading}
+                      className='flex-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800'
+                      disabled={
+                        loadingPlans ||
+                        (formData.userType === 'PROVIDER' && !selectedPlanId)
+                      }
                     >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                          Criando conta...
-                        </>
-                      ) : (
-                        'Criar conta'
-                      )}
+                      Próximo
                     </Button>
-                  </motion.div>
-                </div>
-              </form>
-            )}
-          </div>
-        </motion.div>
+                  </div>
+                </motion.div>
+              )}
+              {currentStep === 5 && (
+                <motion.div
+                  key='step5'
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className='space-y-5'
+                >
+                  <div className='bg-emerald-50 dark:bg-emerald-900/30 rounded-lg p-6 text-center'>
+                    <CheckCircle2 className='h-16 w-16 text-emerald-500 mx-auto mb-4' />
+                    <h3 className='text-xl font-bold mb-2'>Tudo pronto!</h3>
+                    <p className='text-gray-600 dark:text-gray-300'>
+                      Revise suas informações e clique em "Criar conta" para
+                      finalizar seu cadastro.
+                    </p>
+                  </div>
 
-        <motion.div
-          className='hidden items-center justify-center p-6 lg:flex lg:bg-gradient-to-r lg:from-blue-600 lg:to-blue-800 lg:p-10 dark:lg:from-blue-900 dark:lg:to-blue-950'
-          initial={{ opacity: 0, x: 50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
-          <div className='mx-auto items-center text-center text-white'>
+                  <div className='space-y-4 mt-4'>
+                    <div className='bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4'>
+                      <h4 className='font-medium mb-2'>Informações pessoais</h4>
+                      <div className='grid grid-cols-2 gap-2 text-sm'>
+                        <div>
+                          <p className='text-gray-500 dark:text-gray-400'>
+                            Nome:
+                          </p>
+                          <p className='font-medium'>{formData.name}</p>
+                        </div>
+                        <div>
+                          <p className='text-gray-500 dark:text-gray-400'>
+                            Email:
+                          </p>
+                          <p className='font-medium'>{formData.email}</p>
+                        </div>
+                        <div>
+                          <p className='text-gray-500 dark:text-gray-400'>
+                            Tipo:
+                          </p>
+                          <p className='font-medium'>
+                            {formData.userType === 'CLIENT'
+                              ? 'Cliente'
+                              : 'Prestador'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className='text-gray-500 dark:text-gray-400'>
+                            {formData.documentType}:
+                          </p>
+                          <p className='font-medium'>{formData.document}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {formData.userType === 'PROVIDER' && (
+                      <>
+                        <div className='bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4'>
+                          <h4 className='font-medium mb-2'>Especialidade</h4>
+                          <p className='text-sm'>
+                            {formData.specialty === 'Outro'
+                              ? formData.customSpecialty
+                              : formData.specialty}
+                          </p>
+                        </div>
+
+                        <div className='bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4'>
+                          <h4 className='font-medium mb-2'>Endereço</h4>
+                          <div className='grid grid-cols-2 gap-2 text-sm'>
+                            <div>
+                              <p className='text-gray-500 dark:text-gray-400'>
+                                Endereço:
+                              </p>
+                              <p className='font-medium'>{formData.street}</p>
+                            </div>
+                            <div>
+                              <p className='text-gray-500 dark:text-gray-400'>
+                                Cidade:
+                              </p>
+                              <p className='font-medium'>{formData.city}</p>
+                            </div>
+                            <div>
+                              <p className='text-gray-500 dark:text-gray-400'>
+                                Estado:
+                              </p>
+                              <p className='font-medium'>{formData.state}</p>
+                            </div>
+                            <div>
+                              <p className='text-gray-500 dark:text-gray-400'>
+                                CEP:
+                              </p>
+                              <p className='font-medium'>{formData.zipCode}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className='bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4'>
+                          <h4 className='font-medium mb-2'>
+                            Plano selecionado
+                          </h4>
+                          <div className='flex items-center justify-between'>
+                            <div>
+                              <p className='font-medium'>
+                                {plans.find((p) => p.id === selectedPlanId)
+                                  ?.name || 'Nenhum plano selecionado'}
+                              </p>
+                              <p className='text-sm text-gray-500 dark:text-gray-400'>
+                                {selectedPlanId
+                                  ? `R$ ${plans
+                                      .find((p) => p.id === selectedPlanId)
+                                      ?.price.toFixed(2)
+                                      .replace('.', ',')} /mês`
+                                  : ''}
+                              </p>
+                            </div>
+                            <CreditCard className='h-5 w-5 text-blue-500' />
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className='flex gap-4 mt-8'>
+              {currentStep > 1 && (
+                <Button
+                  type='button'
+                  onClick={handlePrevStep}
+                  variant='outline'
+                  className='flex-1 h-12'
+                  disabled={isLoading}
+                >
+                  <ChevronLeft className='mr-2 h-4 w-4' />
+                  Voltar
+                </Button>
+              )}
+              <motion.div
+                className='flex-1'
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Button
+                  type='button'
+                  onClick={handleNextStep}
+                  className='w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 h-12'
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                      Processando...
+                    </>
+                  ) : currentStep <
+                    (formData.userType === 'PROVIDER' ? 5 : 2) ? (
+                    <>
+                      Próximo
+                      <ChevronRight className='ml-2 h-4 w-4' />
+                    </>
+                  ) : (
+                    'Criar conta'
+                  )}
+                </Button>
+              </motion.div>
+            </div>
+          </motion.div>
+
+          {/* Image Column */}
+          <motion.div
+            className='hidden md:flex flex-col items-center justify-center bg-gradient-to-br from-blue-600 to-teal-700 dark:from-blue-800 dark:to-teal-900 rounded-xl p-10 text-white h-full'
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
             <Image
               src='/images/logo-transparente.svg'
               alt='Logo Facilize'
-              width={300}
-              height={300}
-              className='w-[250px] h-auto object-cover mx-auto'
+              width={200}
+              height={200}
+              className='w-[180px] h-auto object-cover mx-auto mb-8'
               priority
             />
-            <h2 className='mt-6 text-3xl font-bold'>
+            <h2 className='text-2xl md:text-3xl font-bold text-center mb-6'>
               Simplifique a gestão do seu negócio
             </h2>
             <motion.ul
-              className='mt-8 space-y-4 text-left max-w-md mx-auto'
+              className='space-y-4 text-left max-w-md'
               initial='hidden'
               animate='visible'
               variants={{
@@ -793,7 +1206,7 @@ export default function Signup() {
                   }}
                 >
                   <svg
-                    className='mr-3 h-6 w-6 flex-shrink-0 text-white'
+                    className='mr-3 h-6 w-6 flex-shrink-0 text-blue-300'
                     fill='none'
                     stroke='currentColor'
                     viewBox='0 0 24 24'
@@ -810,12 +1223,12 @@ export default function Signup() {
                 </motion.li>
               ))}
             </motion.ul>
-            <p className='mt-8 text-sm opacity-90'>
+            <p className='mt-8 text-sm opacity-90 text-center'>
               Mais de 10.000 profissionais já confiam na Facilize para gerenciar
               seus negócios
             </p>
-          </div>
-        </motion.div>
+          </motion.div>
+        </div>
       </div>
 
       <Footer />

@@ -9,12 +9,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { CheckCircle } from 'lucide-react'
 
-// Mock user data - in a real app, this would come from authentication
 const mockUser = {
   id: '123',
   name: 'John Doe',
   email: 'john@example.com',
-  type: 'provider', // or 'client'
+  type: 'provider',
 }
 
 export default function SchedulePage() {

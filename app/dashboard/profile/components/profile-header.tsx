@@ -1,11 +1,13 @@
 'use client'
 
-import { Camera, Edit } from 'lucide-react'
+import { Camera, Edit, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { useUser } from '@/context/UserContext'
 import { useState, useRef, ChangeEvent, useEffect } from 'react'
 import { toast } from 'sonner'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Badge } from '@/components/ui/badge'
 
 const defaultAvatars = [
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA...',
@@ -13,26 +15,72 @@ const defaultAvatars = [
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA...',
 ]
 
+interface Plan {
+  id: number
+  name: string
+  price: number
+  description: string
+}
+
 export function ProfileHeader() {
   const { user, loading, error, refreshUser } = useUser()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [avatarSrc, setAvatarSrc] = useState<string>('')
+  const [avatarLoading, setAvatarLoading] = useState(true)
+  const [plan, setPlan] = useState<Plan | null>(null)
+  const [planLoading, setPlanLoading] = useState(false)
 
   useEffect(() => {
     if (user) {
+      setAvatarLoading(true)
       if (user.avatar) {
         if (user.avatar.startsWith('data:')) {
           setAvatarSrc(user.avatar)
+          setAvatarLoading(false)
         } else {
           fetchAvatar(user.avatar)
         }
       } else {
         const randomIndex = Math.floor(Math.random() * defaultAvatars.length)
         setAvatarSrc(defaultAvatars[randomIndex])
+        setAvatarLoading(false)
+      }
+
+      if (user.type === 'PROVIDER' && user.provider?.planId) {
+        fetchPlan(user.provider.planId)
       }
     }
   }, [user])
+
+  const fetchPlan = async (planId: number) => {
+    setPlanLoading(true)
+    try {
+      const token =
+        localStorage.getItem('access_token') ||
+        sessionStorage.getItem('access_token')
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}plans/${planId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch plan details')
+      }
+
+      const data = await response.json()
+      setPlan(data)
+    } catch (err) {
+      console.error('Error fetching plan:', err)
+      toast.error('Failed to load plan information')
+    } finally {
+      setPlanLoading(false)
+    }
+  }
 
   const fetchAvatar = async (avatarUrl: string) => {
     const token =
@@ -54,6 +102,7 @@ export function ProfileHeader() {
         const reader = new FileReader()
         reader.onloadend = () => {
           setAvatarSrc(reader.result as string)
+          setAvatarLoading(false)
         }
         reader.readAsDataURL(blob)
       } else {
@@ -68,6 +117,7 @@ export function ProfileHeader() {
   const setRandomDefaultAvatar = () => {
     const randomIndex = Math.floor(Math.random() * defaultAvatars.length)
     setAvatarSrc(defaultAvatars[randomIndex])
+    setAvatarLoading(false)
   }
 
   const handleAvatarClick = () => {
@@ -78,9 +128,23 @@ export function ProfileHeader() {
     const file = e.target.files?.[0]
     if (!file || !user) return
 
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file')
+      return
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Image size should be less than 2MB')
+      return
+    }
+
     setIsUploading(true)
+    toast.info('Uploading avatar...')
 
     try {
+      const token =
+        localStorage.getItem('access_token') ||
+        sessionStorage.getItem('access_token')
       const formData = new FormData()
       formData.append('avatar', file)
 
@@ -89,58 +153,85 @@ export function ProfileHeader() {
         {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            Authorization: `Bearer ${token}`,
           },
           body: formData,
         }
       )
 
       if (!response.ok) {
-        throw new Error('Failed to update avatar')
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Failed to update avatar')
       }
 
       await refreshUser()
       toast.success('Avatar updated successfully!')
     } catch (err) {
       console.error('Error updating avatar:', err)
-      toast.error('Error updating avatar')
+      toast.error(err instanceof Error ? err.message : 'Error updating avatar')
     } finally {
       setIsUploading(false)
     }
   }
 
   if (loading) {
-    return <div className='flex flex-col items-center'>Loading...</div>
+    return (
+      <div className='flex flex-col items-center space-y-4'>
+        <Skeleton className='w-24 h-24 rounded-full' />
+        <Skeleton className='h-8 w-48' />
+        <Skeleton className='h-4 w-64' />
+      </div>
+    )
   }
 
   if (error || !user) {
     return (
-      <div className='flex flex-col items-center text-red-500'>
-        {error || 'User not found'}
+      <div className='flex flex-col items-center space-y-4 text-red-500 p-4 rounded-lg bg-red-50 dark:bg-red-900/20'>
+        <div className='text-center'>
+          <p className='font-medium'>{error || 'User not found'}</p>
+          <Button
+            variant='ghost'
+            size='sm'
+            onClick={refreshUser}
+            className='mt-2'
+          >
+            Try Again
+          </Button>
+        </div>
       </div>
     )
   }
 
   return (
     <div className='flex flex-col items-center'>
-      <div className='relative'>
-        <div className='w-24 h-24 rounded-full bg-gray-200 overflow-hidden'>
-          <img
-            src={avatarSrc || '/placeholder.svg?height=96&width=96'}
-            alt='Profile picture'
-            className='w-full h-full object-cover'
-            onError={() => setRandomDefaultAvatar()}
-          />
+      <div className='relative group'>
+        <div className='w-24 h-24 rounded-full bg-gray-200 overflow-hidden relative'>
+          {avatarLoading ? (
+            <div className='absolute inset-0 flex items-center justify-center'>
+              <Loader2 className='h-6 w-6 animate-spin text-gray-400' />
+            </div>
+          ) : (
+            <img
+              src={avatarSrc || '/placeholder.svg?height=96&width=96'}
+              alt='Profile picture'
+              className='w-full h-full object-cover transition-opacity duration-300'
+              onLoad={() => setAvatarLoading(false)}
+              onError={() => {
+                setRandomDefaultAvatar()
+                setAvatarLoading(false)
+              }}
+            />
+          )}
         </div>
         <Button
           size='icon'
           variant='secondary'
-          className='absolute bottom-0 right-0 rounded-full w-8 h-8'
+          className='absolute bottom-0 right-0 rounded-full w-8 h-8 group-hover:opacity-100 transition-opacity'
           onClick={handleAvatarClick}
-          disabled={isUploading}
+          disabled={isUploading || avatarLoading}
         >
           {isUploading ? (
-            <div className='animate-spin'>↻</div>
+            <Loader2 className='h-4 w-4 animate-spin' />
           ) : (
             <Camera className='h-4 w-4' />
           )}
@@ -150,31 +241,45 @@ export function ProfileHeader() {
           type='file'
           ref={fileInputRef}
           onChange={handleFileChange}
-          accept='image/*'
+          accept='image/png, image/jpeg, image/webp'
           className='hidden'
         />
       </div>
 
-      <h1 className='text-2xl font-bold mt-4'>{user.name}</h1>
-      <p className='text-gray-600'>{user.email}</p>
+      <h1 className='text-2xl font-bold mt-4 text-center'>{user.name}</h1>
+      <p className='text-gray-600 dark:text-gray-400 text-center'>
+        {user.email}
+      </p>
 
-      {user.type === 'PROVIDER' && user.provider?.plan && (
+      {user.type === 'PROVIDER' && (
         <div className='flex items-center mt-2'>
-          <span className='text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full'>
-            {user.provider.plan.name}
-          </span>
-          <Button variant='ghost' size='sm' className='ml-2'>
-            <Edit className='h-3 w-3 mr-1' />
-            <Link href='/dashboard/plans'>Alterar Plano</Link>
+          {planLoading ? (
+            <Skeleton className='h-6 w-24 rounded-full' />
+          ) : (
+            <Badge
+              variant='outline'
+              className='bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+            >
+              {plan?.name || 'Professional Plan'}
+            </Badge>
+          )}
+          <Button asChild variant='ghost' size='sm' className='ml-2'>
+            <Link href='/dashboard/plans' className='flex items-center'>
+              <Edit className='h-3 w-3 mr-1' />
+              Alterar Plano
+            </Link>
           </Button>
         </div>
       )}
 
       {user.type === 'CLIENT' && (
         <div className='mt-2'>
-          <span className='text-sm bg-green-100 text-green-800 px-2 py-1 rounded-full'>
+          <Badge
+            variant='outline'
+            className='bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+          >
             Cliente
-          </span>
+          </Badge>
         </div>
       )}
     </div>

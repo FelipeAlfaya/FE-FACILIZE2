@@ -20,7 +20,7 @@ export default function Header({ showProfile = false }: HeaderProps) {
   const router = useRouter()
 
   useEffect(() => {
-    // Verifica se há token no localStorage quando o componente monta
+    // cerifica se tem token no localStorage quando o componente monta
     const token = localStorage.getItem('access_token')
     setIsAuthenticated(!!token)
   }, [])

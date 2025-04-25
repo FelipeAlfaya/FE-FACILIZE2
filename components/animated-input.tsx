@@ -1,74 +1,66 @@
 'use client'
 
-import { useState, type InputHTMLAttributes, forwardRef } from 'react'
+import type React from 'react'
+
+import { useState } from 'react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 
-interface AnimatedInputProps extends InputHTMLAttributes<HTMLInputElement> {
+interface AnimatedInputProps {
   label: string
+  name: string
+  value: string
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
   error?: string
+  type?: string
+  required?: boolean
+  placeholder?: string
+  maxLength?: number
+  icon?: React.ReactNode
 }
 
-const AnimatedInput = forwardRef<HTMLInputElement, AnimatedInputProps>(
-  ({ label, className, error, ...props }, ref) => {
-    const [isFocused, setIsFocused] = useState(false)
-    const [hasValue, setHasValue] = useState(false)
+export default function AnimatedInput({
+  label,
+  name,
+  value,
+  onChange,
+  error,
+  type = 'text',
+  required = false,
+  placeholder = '',
+  maxLength,
+}: AnimatedInputProps) {
+  const [isFocused, setIsFocused] = useState(false)
 
-    const handleFocus = () => {
-      setIsFocused(true)
-    }
-
-    const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-      setIsFocused(false)
-      setHasValue(e.target.value !== '')
-    }
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      setHasValue(e.target.value !== '')
-      if (props.onChange) {
-        props.onChange(e)
-      }
-    }
-
-    return (
-      <div className='relative'>
-        <div
-          className={cn(
-            'group relative rounded-lg border border-gray-300 dark:border-gray-600 transition-all duration-300 ease-in-out bg-white dark:bg-gray-800',
-            isFocused &&
-              'ring-2 ring-blue-500 border-blue-500 dark:ring-blue-400 dark:border-blue-400',
-            error &&
-              'border-red-500 ring-red-500 dark:border-red-500 dark:ring-red-500',
-            className
-          )}
-        >
-          <label
-            className={cn(
-              'absolute left-3 top-1/2 -translate-y-1/2 transition-all duration-200 ease-in-out pointer-events-none text-gray-500 dark:text-gray-400',
-              (isFocused || hasValue) &&
-                'transform -translate-y-[1.85rem] scale-75 text-sm px-1 bg-white dark:bg-gray-800 z-10',
-              isFocused && !error && 'text-blue-500 dark:text-blue-400',
-              error && 'text-red-500 dark:text-red-400'
-            )}
-          >
-            {label}
-          </label>
-          <input
-            {...props}
-            ref={ref}
-            className='w-full px-3 py-3 bg-transparent border-none focus:outline-none text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500'
-            onFocus={handleFocus}
-            onBlur={handleBlur}
-            onChange={handleChange}
-          />
-        </div>
-        {error && (
-          <p className='mt-1 text-xs text-red-500 dark:text-red-400'>{error}</p>
+  return (
+    <div className='relative space-y-1'>
+      <Label
+        htmlFor={name}
+        className={cn(
+          'absolute left-3 transition-all duration-200',
+          isFocused || value
+            ? '-top-2.5 text-xs bg-white dark:bg-gray-900 px-1 z-10'
+            : 'top-2.5',
+          error ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'
         )}
-      </div>
-    )
-  }
-)
-
-AnimatedInput.displayName = 'AnimatedInput'
-
-export default AnimatedInput
+      >
+        {label}
+        {required && <span className='text-red-500 ml-1'>*</span>}
+      </Label>
+      <Input
+        id={name}
+        name={name}
+        type={type}
+        value={value}
+        onChange={onChange}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
+        className={cn('pt-2', error ? 'border-red-500 focus:ring-red-500' : '')}
+        placeholder={isFocused ? placeholder : ''}
+        maxLength={maxLength}
+      />
+      {error && <p className='text-xs text-red-500'>{error}</p>}
+    </div>
+  )
+}

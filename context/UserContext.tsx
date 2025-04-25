@@ -1,4 +1,3 @@
-// context/UserContext.tsx
 'use client'
 
 import {
@@ -22,11 +21,7 @@ interface UserData {
     cpf: string
     cnpj: string | null
     description: string
-    plan?: {
-      id: number
-      name: string
-      price: number
-    }
+    planId: number
     specialty: string
   }
   client?: {

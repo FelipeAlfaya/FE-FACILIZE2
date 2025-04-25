@@ -33,7 +33,6 @@ import {
 } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 
-// Mock data - in a real app, this would come from an API
 const mockServices = [
   { id: '1', name: 'Consulta Padrão', duration: 30, price: 150 },
   { id: '2', name: 'Consulta Detalhada', duration: 60, price: 250 },
@@ -41,7 +40,6 @@ const mockServices = [
   { id: '4', name: 'Retorno', duration: 20, price: 100 },
 ]
 
-// Mock provider availability - in a real app, this would come from an API
 const mockAvailability = {
   '2023-05-15': ['09:00', '10:00', '11:00', '14:00', '15:00'],
   '2023-05-16': ['08:00', '09:00', '10:00', '13:00', '14:00'],
@@ -66,17 +64,14 @@ export function AppointmentForm({ providerId }: AppointmentFormProps) {
   const [availability, setAvailability] =
     useState<Record<string, string[]>>(mockAvailability)
 
-  // Fetch services and provider availability
   useEffect(() => {
     const fetchProviderData = async () => {
       try {
-        // In a real app, you would fetch data from your API
         // const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/providers/${providerId}`)
         // const data = await response.json()
         // setServices(data.services)
         // setAvailability(data.availability)
 
-        // Using mock data for now
         setServices(mockServices)
         setAvailability(mockAvailability)
       } catch (error) {
@@ -87,7 +82,6 @@ export function AppointmentForm({ providerId }: AppointmentFormProps) {
     fetchProviderData()
   }, [providerId])
 
-  // Update available time slots when date changes
   useEffect(() => {
     if (date) {
       const formattedDate = format(date, 'yyyy-MM-dd')
@@ -110,7 +104,6 @@ export function AppointmentForm({ providerId }: AppointmentFormProps) {
     setIsLoading(true)
 
     try {
-      // In a real app, you would send this data to your API
       // await fetch(`${process.env.NEXT_PUBLIC_API_URL}/appointments`, {
       //   method: 'POST',
       //   headers: { 'Content-Type': 'application/json' },
@@ -123,10 +116,8 @@ export function AppointmentForm({ providerId }: AppointmentFormProps) {
       //   })
       // })
 
-      // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000))
 
-      // Redirect to confirmation page or show success message
       router.push('/dashboard/schedule?success=true')
     } catch (error) {
       console.error('Error creating appointment:', error)
