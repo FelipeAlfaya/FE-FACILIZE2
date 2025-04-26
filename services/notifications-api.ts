@@ -8,6 +8,7 @@ export interface Notification {
   title: string
   message: string
   type: 'APPOINTMENT' | 'SYSTEM' | 'INVOICE' | 'TRANSACTION' | 'TAX' | 'MESSAGE'
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
   userId: number
   read: boolean
   data?: Record<string, any>
@@ -26,7 +27,9 @@ export const fetchNotifications = async (
 }
 
 export const markAllAsRead = async (userId: number): Promise<void> => {
-  await axios.patch(`${API_BASE_URL}notifications/mark-all-read`, { userId })
+  await axios.patch(
+    `${API_BASE_URL}notifications/mark-all-read?userId=${userId}`
+  )
 }
 
 export const markAsRead = async (id: string): Promise<Notification> => {
@@ -36,14 +39,27 @@ export const markAsRead = async (id: string): Promise<Notification> => {
   return response.data
 }
 
-export const deleteNotification = async (id: string): Promise<void> => {
-  await axios.delete(`${API_BASE_URL}notifications/${id}`)
+export const deleteNotification = async (
+  id: string,
+  token: string
+): Promise<void> => {
+  await axios.delete(`${API_BASE_URL}notifications/${id}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
 }
 
 export const deleteMultipleNotifications = async (
-  ids: string[]
+  ids: string[],
+  token: string
 ): Promise<void> => {
-  await axios.delete(`${API_BASE_URL}notifications`, { data: { ids } })
+  await axios.delete(`${API_BASE_URL}notifications`, {
+    data: { ids },
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
 }
 
 export const subscribeToNotifications = (

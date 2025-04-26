@@ -5,12 +5,16 @@ import { format, isToday, isYesterday, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
   Bell,
+  CalendarCheck,
   Check,
   CheckCheck,
   ChevronLeft,
+  CreditCard,
+  DollarSign,
   Eye,
   Filter,
   MoreHorizontal,
+  ScrollText,
   Trash2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -41,6 +45,8 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { useRouter } from 'next/navigation'
 import { useUser } from '@/context/UserContext'
 import {
+  deleteMultipleNotifications,
+  deleteNotification,
   fetchNotifications,
   markAllAsRead,
   subscribeToNotifications,
@@ -52,6 +58,7 @@ export interface Notification {
   title: string
   message: string
   type: 'APPOINTMENT' | 'SYSTEM' | 'INVOICE' | 'TRANSACTION' | 'TAX' | 'MESSAGE'
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
   userId: number
   read: boolean
   data?: Record<string, any>
@@ -63,11 +70,13 @@ export interface Notification {
 const getNotificationIcon = (type: string) => {
   switch (type) {
     case 'APPOINTMENT':
-      return <Bell className='h-5 w-5 text-emerald-500' />
+      return <CalendarCheck className='h-5 w-5 text-emerald-500' />
     case 'SYSTEM':
       return <Bell className='h-5 w-5 text-blue-500' />
     case 'INVOICE':
+      return <ScrollText className='h-5 w-5 text-orange-500' />
     case 'TRANSACTION':
+      return <DollarSign className='h-5 w-5 text-green-500' />
     case 'PAYMENT':
       return <Bell className='h-5 w-5 text-purple-500' />
     case 'MESSAGE':
@@ -79,13 +88,63 @@ const getNotificationIcon = (type: string) => {
   }
 }
 
+const getPriorityBadge = (priority: string) => {
+  switch (priority) {
+    case 'LOW':
+      return (
+        <Badge
+          variant='outline'
+          className='border-gray-200 text-gray-700 bg-gray-50'
+        >
+          Baixa
+        </Badge>
+      )
+    case 'MEDIUM':
+      return (
+        <Badge
+          variant='outline'
+          className='border-blue-200 text-blue-700 bg-blue-50'
+        >
+          Média
+        </Badge>
+      )
+    case 'HIGH':
+      return (
+        <Badge
+          variant='outline'
+          className='border-orange-200 text-orange-700 bg-orange-50'
+        >
+          Alta
+        </Badge>
+      )
+    case 'URGENT':
+      return (
+        <Badge
+          variant='outline'
+          className='border-red-200 text-red-700 bg-red-50'
+        >
+          Urgente
+        </Badge>
+      )
+    default:
+      return (
+        <Badge
+          variant='outline'
+          className='border-gray-200 text-gray-700 bg-gray-50'
+        >
+          Sem prioridade
+        </Badge>
+      )
+  }
+}
+
 const getNotificationBadge = (type: string) => {
   switch (type) {
     case 'APPOINTMENT':
       return (
         <Badge
           variant='outline'
-          className='border-blue-200 text-blue-700 bg-blue-50'
+          className='border-blue-200 text-blue-700 bg-blue-50/90'
         >
           Agendamento
         </Badge>
@@ -94,7 +153,7 @@ const getNotificationBadge = (type: string) => {
       return (
         <Badge
           variant='outline'
-          className='border-gray-200 text-gray-700 bg-gray-50'
+          className='border-gray-200 text-gray-700 bg-gray-50/90'
         >
           Sistema
         </Badge>
@@ -103,7 +162,7 @@ const getNotificationBadge = (type: string) => {
       return (
         <Badge
           variant='outline'
-          className='border-purple-200 text-purple-700 bg-purple-50'
+          className='border-purple-200 text-purple-700 bg-purple-50/90'
         >
           Fatura
         </Badge>
@@ -121,7 +180,7 @@ const getNotificationBadge = (type: string) => {
       return (
         <Badge
           variant='outline'
-          className='border-amber-200 text-amber-700 bg-amber-50'
+          className='border-amber-200 text-amber-700 bg-amber-50/90'
         >
           Mensagem
         </Badge>
@@ -257,17 +316,28 @@ export function NotificationsScreen() {
 
   const handleDeleteNotification = (id: string) => {
     setNotificationToDelete(id)
+
     setDeleteDialogOpen(true)
   }
 
-  const confirmDelete = () => {
-    if (notificationToDelete) {
+  const token =
+    localStorage.getItem('access_token') ||
+    sessionStorage.getItem('access_token')
+
+  const confirmDelete = async () => {
+    if (!notificationToDelete || !token) return
+
+    try {
+      await deleteNotification(notificationToDelete, token)
       setNotifications((prev) =>
         prev.filter((notification) => notification.id !== notificationToDelete)
       )
+    } catch (error) {
+      console.error('Failed to delete notification:', error)
+    } finally {
+      setDeleteDialogOpen(false)
+      setNotificationToDelete(null)
     }
-    setDeleteDialogOpen(false)
-    setNotificationToDelete(null)
   }
 
   const handleMarkAllAsRead = async () => {
@@ -298,14 +368,21 @@ export function NotificationsScreen() {
     }
   }
 
-  const handleDeleteSelected = () => {
-    setNotifications((prev) =>
-      prev.filter(
-        (notification) => !selectedNotifications.includes(notification.id)
+  const handleDeleteSelected = async () => {
+    if (!token || selectedNotifications.length === 0) return
+
+    try {
+      await deleteMultipleNotifications(selectedNotifications, token)
+      setNotifications((prev) =>
+        prev.filter(
+          (notification) => !selectedNotifications.includes(notification.id)
+        )
       )
-    )
-    setSelectedNotifications([])
-    setSelectMode(false)
+      setSelectedNotifications([])
+      setSelectMode(false)
+    } catch (error) {
+      console.error('Failed to delete multiple notifications:', error)
+    }
   }
 
   const handleMarkSelectedAsRead = () => {
@@ -619,6 +696,7 @@ export function NotificationsScreen() {
                     <div className='flex items-center justify-between mt-2'>
                       <div className='flex items-center gap-2'>
                         {getNotificationBadge(notification.type)}
+                        {getPriorityBadge(notification.priority)}
                         {notification.actionable && (
                           <Badge
                             variant='outline'

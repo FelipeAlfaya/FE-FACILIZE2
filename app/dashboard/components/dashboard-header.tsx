@@ -35,14 +35,19 @@ import { useRouter } from 'next/navigation'
 import { avatar1, avatar2, avatar3 } from '../common/default-avatars'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { subscribeToNotifications } from '@/services/notifications-api'
 
 type Notification = {
   id: string
   title: string
   message: string
-  time: string
+  type: 'APPOINTMENT' | 'SYSTEM' | 'INVOICE' | 'TRANSACTION' | 'TAX' | 'MESSAGE'
+  userId: number
   read: boolean
+  data?: Record<string, any>
   createdAt: string
+  link?: string
+  actionable?: boolean
 }
 
 const defaultAvatars: string[] = [...avatar1, ...avatar2, ...avatar3]
@@ -101,8 +106,9 @@ export function DashboardHeader() {
     if (!user?.id) return
 
     try {
+      console.log('marcando tudo como lida')
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}notifications/mark-all-read`,
+        `${process.env.NEXT_PUBLIC_API_URL}notifications/mark-all-read?userId=${user.id}`,
         {
           method: 'PATCH',
           headers: {
@@ -125,18 +131,37 @@ export function DashboardHeader() {
     }
   }
 
-  // Carrega notificações quando o usuário muda ou quando o popover abre
+  useEffect(() => {
+    if (!user?.id) return
+
+    const unsubscribe = subscribeToNotifications(user.id, (newNotification) => {
+      // Formata a nova notificação para o formato esperado
+      const formattedNotification = {
+        ...newNotification,
+        time: formatDistanceToNow(new Date(newNotification.createdAt), {
+          addSuffix: true,
+          locale: ptBR,
+        }),
+      }
+
+      // Adiciona a nova notificação no início da lista
+      setNotifications((prev) => [formattedNotification, ...prev])
+
+      // Incrementa o contador se não estiver lida
+      if (!newNotification.read) {
+        setUnreadCount((prev) => prev + 1)
+      }
+    })
+
+    return () => {
+      unsubscribe()
+    }
+  }, [user?.id])
+
   useEffect(() => {
     fetchNotifications()
   }, [notificationsOpen, user?.id])
 
-  // Configura polling para atualizar notificações
-  useEffect(() => {
-    const interval = setInterval(fetchNotifications, 60000) // Atualiza a cada minuto
-    return () => clearInterval(interval)
-  }, [user?.id])
-
-  // Código existente para avatar
   useEffect(() => {
     if (user) {
       if (user.avatar) {
@@ -322,7 +347,7 @@ export function DashboardHeader() {
                           {notification.title}
                         </h4>
                         <span className='text-xs text-muted-foreground'>
-                          {notification.time}
+                          {notification.createdAt}
                         </span>
                       </div>
                       <p className='text-sm text-muted-foreground mt-1'>
