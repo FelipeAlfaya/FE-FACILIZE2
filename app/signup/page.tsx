@@ -398,7 +398,7 @@ export default function Signup() {
           formData.specialty === 'Outro'
             ? formData.customSpecialty
             : formData.specialty,
-        planId: selectedPlanId, // Envia o ID do plano selecionado
+        planId: selectedPlanId,
       }),
     }
 

@@ -10,12 +10,16 @@ import {
   Calendar,
   CheckCircle,
   ArrowRight,
+  Trash2,
+  Check,
+  Plus,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useUser } from '@/context/UserContext'
 import { toast } from 'sonner'
 import { Input } from '@/components/ui/input'
 import { Label } from '@radix-ui/react-label'
+import { PaymentMethodModal } from './payment-method-modal'
 
 interface Plan {
   id: number
@@ -53,6 +57,25 @@ export function BillingTab() {
     country: '',
   })
   const [isEditingAddress, setIsEditingAddress] = useState(false)
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
+  const [paymentMethods, setPaymentMethods] = useState([
+    {
+      id: 'card_1',
+      type: 'mastercard',
+      last4: '4242',
+      expMonth: 12,
+      expYear: 2025,
+      isDefault: true,
+    },
+    {
+      id: 'card_2',
+      type: 'visa',
+      last4: '1234',
+      expMonth: 8,
+      expYear: 2024,
+      isDefault: false,
+    },
+  ])
 
   const fetchPlan = async () => {
     if (!user) {
@@ -105,6 +128,31 @@ export function BillingTab() {
     } finally {
       setLoadingPlan(false)
     }
+  }
+
+  const setDefaultCard = (cardId: string) => {
+    setPaymentMethods((methods) =>
+      methods.map((method) => ({
+        ...method,
+        isDefault: method.id === cardId,
+      }))
+    )
+  }
+
+  const removeCard = (cardId: string) => {
+    setPaymentMethods((methods) =>
+      methods.filter((method) => method.id !== cardId)
+    )
+  }
+
+  const addCard = (newCard: any) => {
+    setPaymentMethods((methods) => [
+      ...methods.map((method) => ({
+        ...method,
+        isDefault: newCard.isDefault ? false : method.isDefault,
+      })),
+      newCard,
+    ])
   }
 
   const fetchAddress = async () => {
@@ -229,13 +277,13 @@ export function BillingTab() {
         <Card>
           <CardContent className='p-6 text-center'>
             <div className='space-y-4'>
-              <h3 className='text-2xl font-bold'>Upgrade to Provider Plan</h3>
+              <h3 className='text-2xl font-bold'>Adquira um Plano!</h3>
               <p className='text-gray-600'>
-                Unlock powerful features to grow your business by becoming a
-                provider
+                Desbloqueie recursos exclusivos e comece a expandir seu negócio
+                como prestador de serviços.
               </p>
               <Button onClick={handleChangePlan} className='mt-4'>
-                Explore Plans <ArrowRight className='ml-2 h-4 w-4' />
+                Conheça os Planos <ArrowRight className='ml-2 h-4 w-4' />
               </Button>
             </div>
           </CardContent>
@@ -428,19 +476,77 @@ export function BillingTab() {
 
       <Card>
         <CardContent className='p-6'>
-          <h3 className='text-lg font-medium mb-4'>Método de Pagamento</h3>
-          <div className='flex items-center gap-4 p-4 border rounded-md'>
-            <CreditCard className='h-8 w-8 text-gray-500' />
-            <div>
-              <p className='font-medium'>Mastercard terminando em 4242</p>
-              <p className='text-sm text-gray-500 dark:text-gray-400'>
-                Expira em 12/2025
-              </p>
-            </div>
+          <div className='flex items-center justify-between mb-4'>
+            <h3 className='text-lg font-medium'>Métodos de Pagamento</h3>
+            <Button
+              onClick={() => setIsPaymentModalOpen(true)}
+              variant='outline'
+              className='flex items-center gap-1'
+            >
+              <Plus className='h-4 w-4' /> Adicionar Cartão
+            </Button>
           </div>
-          <div className='mt-4 flex gap-2'>
-            <Button variant='outline'>Atualizar Método de Pagamento</Button>
-            <Button variant='outline'>Adicionar Novo Cartão</Button>
+
+          <div className='space-y-3'>
+            {paymentMethods.map((card) => (
+              <div
+                key={card.id}
+                className={`flex items-center justify-between p-4 border rounded-md ${
+                  card.isDefault
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/10'
+                    : ''
+                }`}
+              >
+                <div className='flex items-center gap-4'>
+                  <CreditCard
+                    className={`h-8 w-8 ${
+                      card.isDefault ? 'text-blue-500' : 'text-gray-500'
+                    }`}
+                  />
+                  <div>
+                    <div className='flex items-center gap-2'>
+                      <p className='font-medium capitalize'>
+                        {card.type} terminando em {card.last4}
+                      </p>
+                      {card.isDefault && (
+                        <Badge
+                          variant='outline'
+                          className='bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800'
+                        >
+                          Padrão
+                        </Badge>
+                      )}
+                    </div>
+                    <p className='text-sm text-gray-500 dark:text-gray-400'>
+                      Expira em {card.expMonth}/{card.expYear}
+                    </p>
+                  </div>
+                </div>
+                <div className='flex gap-2'>
+                  {!card.isDefault && (
+                    <Button
+                      variant='ghost'
+                      size='sm'
+                      onClick={() => setDefaultCard(card.id)}
+                      className='text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                    >
+                      <Check className='h-4 w-4 mr-1' /> Definir como padrão
+                    </Button>
+                  )}
+                  {paymentMethods.length > 1 && (
+                    <Button
+                      variant='ghost'
+                      size='sm'
+                      onClick={() => removeCard(card.id)}
+                      className='text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20'
+                      disabled={card.isDefault}
+                    >
+                      <Trash2 className='h-4 w-4' />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
@@ -513,6 +619,13 @@ export function BillingTab() {
           </Button>
         </CardFooter>
       </Card>
+
+      <PaymentMethodModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        onAddCard={addCard}
+        existingCards={paymentMethods}
+      />
 
       {renderBillingInformation()}
     </div>
