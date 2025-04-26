@@ -75,7 +75,6 @@ export function ScheduleModal({
     fetchAvailability()
   }, [provider])
 
-  // Update available time slots when date changes
   useEffect(() => {
     if (date) {
       const formattedDate = format(date, 'yyyy-MM-dd')

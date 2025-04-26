@@ -33,6 +33,8 @@ import Image from 'next/image'
 import { useAuth } from '@/context/AuthContext'
 import { useRouter } from 'next/navigation'
 import { avatar1, avatar2, avatar3 } from '../common/default-avatars'
+import { formatDistanceToNow } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 
 type Notification = {
   id: string
@@ -40,52 +42,101 @@ type Notification = {
   message: string
   time: string
   read: boolean
+  createdAt: string
 }
-
-const mockNotifications: Notification[] = [
-  {
-    id: '1',
-    title: 'Novo agendamento',
-    message: 'João Silva agendou uma consultoria para amanhã às 10:00',
-    time: '5 minutos atrás',
-    read: false,
-  },
-  {
-    id: '2',
-    title: 'Agendamento confirmado',
-    message: 'Seu agendamento com Maria Oliveira foi confirmado',
-    time: '1 hora atrás',
-    read: false,
-  },
-  {
-    id: '3',
-    title: 'Lembrete',
-    message: 'Você tem um agendamento com Carlos Mendes em 30 minutos',
-    time: '30 minutos atrás',
-    read: true,
-  },
-  {
-    id: '4',
-    title: 'Fatura disponível',
-    message: 'Sua fatura do mês de Abril está disponível para pagamento',
-    time: '2 horas atrás',
-    read: true,
-  },
-]
 
 const defaultAvatars: string[] = [...avatar1, ...avatar2, ...avatar3]
 
 export function DashboardHeader() {
-  const [notifications, setNotifications] =
-    useState<Notification[]>(mockNotifications)
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [isLoadingNotifications, setIsLoadingNotifications] = useState(true)
   const [avatarSrc, setAvatarSrc] = useState<string>('')
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const { theme, setTheme } = useTheme()
   const { user } = useAuth()
   const router = useRouter()
 
-  const unreadCount = notifications.filter((n) => !n.read).length
+  // Função para carregar notificações
+  const fetchNotifications = async () => {
+    if (!user?.id) return
 
+    try {
+      setIsLoadingNotifications(true)
+      console.log('teste')
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}notifications?userId=${user.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${
+              localStorage.getItem('access_token') ||
+              sessionStorage.getItem('access_token')
+            }`,
+          },
+        }
+      )
+
+      if (!response.ok) throw new Error('Failed to fetch notifications')
+
+      const data = await response.json()
+      const formattedNotifications = data.map((notification: any) => ({
+        ...notification,
+        time: formatDistanceToNow(new Date(notification.createdAt), {
+          addSuffix: true,
+          locale: ptBR,
+        }),
+      }))
+
+      setNotifications(formattedNotifications)
+      setUnreadCount(data.filter((n: any) => !n.read).length)
+    } catch (error) {
+      console.error('Error loading notifications:', error)
+    } finally {
+      setIsLoadingNotifications(false)
+    }
+  }
+
+  // Função para marcar todas como lidas
+  const markAllAsRead = async () => {
+    if (!user?.id) return
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}notifications/mark-all-read`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${
+              localStorage.getItem('access_token') ||
+              sessionStorage.getItem('access_token')
+            }`,
+          },
+          body: JSON.stringify({ userId: user.id }),
+        }
+      )
+
+      if (response.ok) {
+        setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
+        setUnreadCount(0)
+      }
+    } catch (error) {
+      console.error('Error marking notifications as read:', error)
+    }
+  }
+
+  // Carrega notificações quando o usuário muda ou quando o popover abre
+  useEffect(() => {
+    fetchNotifications()
+  }, [notificationsOpen, user?.id])
+
+  // Configura polling para atualizar notificações
+  useEffect(() => {
+    const interval = setInterval(fetchNotifications, 60000) // Atualiza a cada minuto
+    return () => clearInterval(interval)
+  }, [user?.id])
+
+  // Código existente para avatar
   useEffect(() => {
     if (user) {
       if (user.avatar) {
@@ -107,7 +158,7 @@ export function DashboardHeader() {
         `${process.env.NEXT_PUBLIC_API_URL}${avatarUrl.replace(/^\/+/, '')}`,
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            Authorization: `Bearer ${localStorage.getItem('access_token')}`,
           },
         }
       )
@@ -139,10 +190,6 @@ export function DashboardHeader() {
     sessionStorage.removeItem('access_token')
     sessionStorage.removeItem('user')
     router.push('/login')
-  }
-
-  const markAllAsRead = () => {
-    setNotifications(notifications.map((n) => ({ ...n, read: true })))
   }
 
   const toggleTheme = () => {
@@ -256,7 +303,11 @@ export function DashboardHeader() {
                 )}
               </div>
               <div className='max-h-80 overflow-y-auto'>
-                {notifications.length > 0 ? (
+                {isLoadingNotifications ? (
+                  <div className='p-4 text-center text-muted-foreground'>
+                    Carregando notificações...
+                  </div>
+                ) : notifications.length > 0 ? (
                   notifications.map((notification) => (
                     <div
                       key={notification.id}
@@ -286,8 +337,10 @@ export function DashboardHeader() {
                 )}
               </div>
               <div className='p-2 border-t'>
-                <Button variant='ghost' size='sm' className='w-full'>
-                  Ver todas as notificações
+                <Button variant='ghost' size='sm' className='w-full' asChild>
+                  <Link href='/dashboard/notifications'>
+                    Ver todas as notificações
+                  </Link>
                 </Button>
               </div>
             </PopoverContent>

@@ -55,8 +55,6 @@ export default function ForgotPasswordPage() {
     setSubmitStatus('idle')
 
     try {
-      // In a real application, this would be an API call to request password reset
-      // For demo purposes, we'll simulate a successful request
       await new Promise((resolve) => setTimeout(resolve, 1500))
 
       setSubmitStatus('success')
