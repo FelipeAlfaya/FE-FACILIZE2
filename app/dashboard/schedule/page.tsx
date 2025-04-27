@@ -22,15 +22,12 @@ export default function SchedulePage() {
   const [showSuccess, setShowSuccess] = useState(false)
 
   useEffect(() => {
-    // In a real app, you would get the user type from authentication
     setUserType(mockUser.type as 'provider' | 'client')
 
-    // Check for success parameter in URL
     const success = searchParams.get('success')
     if (success === 'true') {
       setShowSuccess(true)
 
-      // Hide success message after 5 seconds
       const timer = setTimeout(() => {
         setShowSuccess(false)
       }, 5000)

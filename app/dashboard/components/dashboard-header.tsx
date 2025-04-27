@@ -62,6 +62,46 @@ export function DashboardHeader() {
   const { user } = useAuth()
   const router = useRouter()
 
+  const formatNotificationTime = (isoString: string) => {
+    const now = new Date()
+    const notificationDate = new Date(isoString)
+    const seconds = Math.floor(
+      (now.getTime() - notificationDate.getTime()) / 1000
+    )
+
+    if (seconds < 60) {
+      return 'agora mesmo'
+    }
+
+    const minutes = Math.floor(seconds / 60)
+    if (minutes < 60) {
+      return `há ${minutes} minuto${minutes !== 1 ? 's' : ''}`
+    }
+
+    const hours = Math.floor(minutes / 60)
+    if (hours < 24) {
+      return `há ${hours} hora${hours !== 1 ? 's' : ''}`
+    }
+
+    const days = Math.floor(hours / 24)
+    if (days < 7) {
+      return `há ${days} dia${days !== 1 ? 's' : ''}`
+    }
+
+    const weeks = Math.floor(days / 7)
+    if (weeks < 4) {
+      return `há ${weeks} semana${weeks !== 1 ? 's' : ''}`
+    }
+
+    const months = Math.floor(days / 30)
+    if (months < 12) {
+      return `há ${months} mês${months !== 1 ? 'es' : ''}`
+    }
+
+    const years = Math.floor(days / 365)
+    return `há ${years} ano${years !== 1 ? 's' : ''}`
+  }
+
   // Função para carregar notificações
   const fetchNotifications = async () => {
     if (!user?.id) return
@@ -135,7 +175,6 @@ export function DashboardHeader() {
     if (!user?.id) return
 
     const unsubscribe = subscribeToNotifications(user.id, (newNotification) => {
-      // Formata a nova notificação para o formato esperado
       const formattedNotification = {
         ...newNotification,
         time: formatDistanceToNow(new Date(newNotification.createdAt), {
@@ -144,10 +183,8 @@ export function DashboardHeader() {
         }),
       }
 
-      // Adiciona a nova notificação no início da lista
       setNotifications((prev) => [formattedNotification, ...prev])
 
-      // Incrementa o contador se não estiver lida
       if (!newNotification.read) {
         setUnreadCount((prev) => prev + 1)
       }
@@ -347,7 +384,7 @@ export function DashboardHeader() {
                           {notification.title}
                         </h4>
                         <span className='text-xs text-muted-foreground'>
-                          {notification.createdAt}
+                          {formatNotificationTime(notification.createdAt)}
                         </span>
                       </div>
                       <p className='text-sm text-muted-foreground mt-1'>
