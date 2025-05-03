@@ -85,7 +85,7 @@ export default function Sobre() {
   ]
 
   return (
-    <main className='min-h-screen bg-gray-50 dark:bg-gray-900'>
+    <main className='min-h-screen'>
       <Header />
 
       {/* Hero Section */}
@@ -154,7 +154,7 @@ export default function Sobre() {
       </section>
 
       {/* Values Section */}
-      <section className='py-16 bg-white dark:bg-gray-800'>
+      <section className='py-16 bg-gray-50 dark:bg-slate-900'>
         <div className='max-w-7xl mx-auto px-4 md:px-8'>
           <motion.div
             initial={{ opacity: 0 }}
@@ -163,7 +163,7 @@ export default function Sobre() {
             viewport={{ once: true }}
             className='text-center mb-12'
           >
-            <h2 className='text-3xl font-bold mb-4'>
+            <h2 className='text-3xl font-bold mb-4 '>
               Nossos <span className='text-blue-600'>Valores</span>
             </h2>
             <p className='text-gray-600 dark:text-gray-300 max-w-2xl mx-auto'>
@@ -206,7 +206,7 @@ export default function Sobre() {
           viewport={{ once: true }}
           className='text-center mb-12'
         >
-          <h2 className='text-3xl font-bold mb-4'>
+          <h2 className='text-3xl font-bold mb-4 dark:text-white'>
             Nossa <span className='text-blue-600'>Equipe</span>
           </h2>
           <p className='text-gray-600 dark:text-gray-300 max-w-2xl mx-auto'>
@@ -244,7 +244,7 @@ export default function Sobre() {
       </section>
 
       {/* Timeline Section */}
-      <section className='py-16 bg-gray-100 dark:bg-gray-800/50'>
+      <section className='py-16 bg-gray-50 dark:bg-slate-900/50'>
         <div className='max-w-4xl mx-auto px-4 md:px-8'>
           <motion.div
             initial={{ opacity: 0 }}

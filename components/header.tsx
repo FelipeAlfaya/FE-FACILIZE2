@@ -25,6 +25,12 @@ export default function Header({ showProfile = false }: HeaderProps) {
     setIsAuthenticated(!!token)
   }, [])
 
+  useEffect(() => {
+    if (!setIsAuthenticated) {
+      router.push('/login')
+    }
+  }, [setIsAuthenticated, router])
+
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark')
   }
@@ -37,7 +43,7 @@ export default function Header({ showProfile = false }: HeaderProps) {
   }
 
   return (
-    <header className='shadow-sm bg-white dark:bg-slate-800'>
+    <header className='shadow-sm'>
       <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
         <div className='flex justify-between h-16 items-center'>
           <div className='flex items-center'>
@@ -57,28 +63,28 @@ export default function Header({ showProfile = false }: HeaderProps) {
           </div>
 
           <div className='hidden md:flex items-center space-x-6'>
-            <nav className='flex space-x-6'>
+            <nav className='flex space-x-6 transition-all duration-300'>
               <Link
                 href='/'
-                className='text-gray-600 hover:text-gray-900 dark:text-gray-200 dark:hover:text-slate-950'
+                className='text-gray-600 hover:text-gray-900 duration-200 dark:text-gray-200 dark:hover:text-gray-600'
               >
                 Início
               </Link>
               <Link
                 href='/planos'
-                className='text-gray-600 hover:text-gray-900 dark:text-gray-200 dark:hover:text-slate-950'
+                className='text-gray-600 hover:text-gray-900 duration-200 dark:text-gray-200 dark:hover:text-gray-600'
               >
                 Planos
               </Link>
               <Link
                 href='/sobre'
-                className='text-gray-600 hover:text-gray-900 dark:text-gray-200 dark:hover:text-slate-950'
+                className='text-gray-600 hover:text-gray-900 duration-200 dark:text-gray-200 dark:hover:text-gray-600'
               >
                 Sobre
               </Link>
               <Link
                 href='/contato'
-                className='text-gray-600 hover:text-gray-900 dark:text-gray-200 dark:hover:text-slate-950'
+                className='text-gray-600 hover:text-gray-900 duration-200 dark:text-gray-200 dark:hover:text-gray-600'
               >
                 Contato
               </Link>

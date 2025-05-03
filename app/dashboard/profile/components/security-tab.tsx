@@ -262,7 +262,7 @@ export function SecurityTab() {
         <CardContent className='p-6'>
           <h3 className='text-lg font-medium mb-4'>Dispositivos Conectados</h3>
           <div className='space-y-4'>
-            <div className='flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-md'>
+            <div className='flex items-center justify-between p-3 bg-accent dark:rounded-md'>
               <div className='flex items-center space-x-3'>
                 <Laptop className='h-8 w-8 text-gray-500' />
                 <div>
@@ -278,7 +278,7 @@ export function SecurityTab() {
               </Button>
             </div>
 
-            <div className='flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-md'>
+            <div className='flex items-center justify-between p-3 bg-accent dark:rounded-md'>
               <div className='flex items-center space-x-3'>
                 <Smartphone className='h-8 w-8 text-gray-500' />
                 <div>

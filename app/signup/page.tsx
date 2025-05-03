@@ -691,7 +691,7 @@ export default function Signup() {
   }
 
   return (
-    <main className='min-h-screen bg-gray-50 dark:bg-gray-900'>
+    <main className='min-h-screen'>
       <Header />
 
       <div className='container max-w-7xl mx-auto px-4 py-8 md:py-12'>

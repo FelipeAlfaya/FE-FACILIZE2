@@ -134,7 +134,7 @@ export default function Home() {
       <section className='py-16 px-4 md:px-8 max-w-7xl mx-auto'>
         <AnimatedSection>
           <h2 className='text-2xl font-bold text-center mb-12'>
-            NOSSOS <span className='text-purple-600'>PLANOS</span>
+            NOSSOS <span className='text-blue-600'>PLANOS</span>
           </h2>
         </AnimatedSection>
 

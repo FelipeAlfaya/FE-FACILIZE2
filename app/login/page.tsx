@@ -107,12 +107,12 @@ export default function Login() {
   }
 
   return (
-    <main className='min-h-screen bg-gray-50 dark:bg-gray-900'>
+    <main className='min-h-screen'>
       <Header />
 
       <div className='w-full gap-10 lg:grid lg:min-h-[600px] lg:grid-cols-2 lg:gap-0 xl:min-h-[800px]'>
         <motion.div
-          className='flex items-center justify-center p-6 xl:p-10'
+          className='flex items-center bg-muted justify-center p-6 xl:p-10'
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5 }}
