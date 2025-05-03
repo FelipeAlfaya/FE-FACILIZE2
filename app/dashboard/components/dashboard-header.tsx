@@ -32,7 +32,6 @@ import { useTheme } from 'next-themes'
 import Image from 'next/image'
 import { useAuth } from '@/context/AuthContext'
 import { useRouter } from 'next/navigation'
-import { avatar1, avatar2, avatar3 } from '../common/default-avatars'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { subscribeToNotifications } from '@/services/notifications-api'
@@ -50,7 +49,11 @@ type Notification = {
   actionable?: boolean
 }
 
-const defaultAvatars: string[] = [...avatar1, ...avatar2, ...avatar3]
+const defaultAvatars: string[] = [
+  'images/Profile-1',
+  'images/Profile-2',
+  'images/profile-3',
+]
 
 export function DashboardHeader() {
   const [notifications, setNotifications] = useState<Notification[]>([])

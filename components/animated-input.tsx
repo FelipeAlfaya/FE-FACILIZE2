@@ -40,7 +40,7 @@ export default function AnimatedInput({
         className={cn(
           'absolute left-3 transition-all duration-200',
           isFocused || value
-            ? '-top-2.5 text-xs bg-white dark:bg-gray-900 px-1 z-10'
+            ? '-top-2.5 text-xs bg-white dark:bg-black px-1 z-10 rounded-xs'
             : 'top-2.5',
           error ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'
         )}

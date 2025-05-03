@@ -45,17 +45,19 @@ import {
 } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
+import { Plan } from '../dashboard/plans/services/plans'
+import { Elements } from '@stripe/react-stripe-js'
+import { PaymentFlow } from '../dashboard/payment/components/payment-flow'
+import { loadStripe } from '@stripe/stripe-js'
 
-interface Plan {
-  id: number
-  name: string
-  price: number
-  description: string
-  features: {
-    id: number
-    name: string
-    planId: number
-  }[]
+const stripePromise = loadStripe(
+  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
+)
+
+interface PaymentFlowData {
+  clientSecret?: string
+  subscriptionId?: string
+  requiresAction?: boolean
 }
 
 export default function Signup() {
@@ -86,6 +88,10 @@ export default function Signup() {
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null)
   const [loadingPlans, setLoadingPlans] = useState(false)
   const [plans, setPlans] = useState<Plan[]>([])
+  const [cities, setCities] = useState<string[]>([])
+  const [loadingCities, setLoadingCities] = useState(false)
+  const [paymentFlowData, setPaymentFlowData] =
+    useState<PaymentFlowData | null>(null)
 
   const specialties = [
     'Advogado',
@@ -100,6 +106,39 @@ export default function Signup() {
     'Terapeuta',
     'Outro',
   ]
+
+  const getStateName = (uf: string) => {
+    const states: Record<string, string> = {
+      AC: 'Acre',
+      AL: 'Alagoas',
+      AP: 'Amapá',
+      AM: 'Amazonas',
+      BA: 'Bahia',
+      CE: 'Ceará',
+      DF: 'Distrito Federal',
+      ES: 'Espírito Santo',
+      GO: 'Goiás',
+      MA: 'Maranhão',
+      MT: 'Mato Grosso',
+      MS: 'Mato Grosso do Sul',
+      MG: 'Minas Gerais',
+      PA: 'Pará',
+      PB: 'Paraíba',
+      PR: 'Paraná',
+      PE: 'Pernambuco',
+      PI: 'Piauí',
+      RJ: 'Rio de Janeiro',
+      RN: 'Rio Grande do Norte',
+      RS: 'Rio Grande do Sul',
+      RO: 'Rondônia',
+      RR: 'Roraima',
+      SC: 'Santa Catarina',
+      SP: 'São Paulo',
+      SE: 'Sergipe',
+      TO: 'Tocantins',
+    }
+    return states[uf] || uf
+  }
 
   const brazilianStates = [
     'AC',
@@ -132,7 +171,6 @@ export default function Signup() {
   ]
 
   useEffect(() => {
-    // Update progress based on current step
     const totalSteps = formData.userType === 'PROVIDER' ? 5 : 2
     setProgress((currentStep / totalSteps) * 100)
   }, [currentStep, formData.userType])
@@ -148,7 +186,7 @@ export default function Signup() {
         }
 
         const data = await response.json()
-        setPlans(data) // A API retorna diretamente o array de planos
+        setPlans(data)
       } catch (error) {
         toast.error('Failed to load plans')
         console.error('Error fetching plans:', error)
@@ -161,6 +199,28 @@ export default function Signup() {
       fetchPlans()
     }
   }, [formData.userType, currentStep])
+
+  const fetchCitiesByState = async (uf: string) => {
+    try {
+      setLoadingCities(true)
+      const response = await fetch(
+        `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios`
+      )
+
+      if (!response.ok) {
+        throw new Error('Falha ao carregar cidades')
+      }
+
+      const data = await response.json()
+      const cityNames = data.map((city: any) => city.nome).sort()
+      setCities(cityNames)
+    } catch (error) {
+      toast.error('Falha ao carregar cidades')
+      console.error('Erro ao buscar cidades:', error)
+    } finally {
+      setLoadingCities(false)
+    }
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target
@@ -178,7 +238,44 @@ export default function Signup() {
       ...(name === 'specialty' && value !== 'Outro'
         ? { customSpecialty: '' }
         : {}),
+      // Reset city when state changes
+      ...(name === 'state' ? { city: '' } : {}),
     }))
+
+    // Fetch cities when state changes
+    if (name === 'state') {
+      fetchCitiesByState(value)
+    }
+  }
+
+  const fetchAddressByZipCode = async (zipCode: string) => {
+    try {
+      const cleanedZipCode = zipCode.replace(/\D/g, '')
+      if (cleanedZipCode.length !== 8) return
+
+      const response = await fetch(
+        `https://viacep.com.br/ws/${cleanedZipCode}/json/`
+      )
+      if (!response.ok) throw new Error('CEP não encontrado')
+
+      const data = await response.json()
+      if (data.erro) throw new Error('CEP não encontrado')
+
+      setFormData((prev) => ({
+        ...prev,
+        street: data.logradouro || '',
+        city: data.localidade || '',
+        state: data.uf || '',
+      }))
+
+      // Busca as cidades para o estado encontrado
+      if (data.uf) {
+        fetchCitiesByState(data.uf)
+      }
+    } catch (error) {
+      console.error('Erro ao buscar CEP:', error)
+      toast.error('Não foi possível encontrar o endereço para este CEP')
+    }
   }
 
   const validateCPF = (cpf: string) => {
@@ -375,6 +472,10 @@ export default function Signup() {
     }
   }
 
+  const formatDocument = (value: string) => {
+    return value.replace(/\D/g, '')
+  }
+
   const handleSubmit = async () => {
     setIsLoading(true)
 
@@ -382,7 +483,7 @@ export default function Signup() {
       email: formData.email,
       password: formData.password,
       name: formData.name,
-      type: formData.userType.toUpperCase(),
+      type: formData.userType,
       ...(formData.documentType === 'CPF'
         ? { cpf: formatDocument(formData.document) }
         : { cnpj: formatDocument(formData.document) }),
@@ -420,18 +521,49 @@ export default function Signup() {
       }
 
       const data = await response.json()
-      toast.success('Cadastro realizado com sucesso!')
-      router.push('/login')
+
+      if (formData.userType === 'PROVIDER' && selectedPlanId) {
+        // Salva os dados do usuário temporariamente
+        const tempAuthData = {
+          email: formData.email,
+          password: formData.password,
+        }
+
+        // Faz login automaticamente para obter o token
+        const loginResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}auth/login`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(tempAuthData),
+          }
+        )
+
+        if (!loginResponse.ok) {
+          throw new Error('Falha no login automático para processar pagamento')
+        }
+
+        const loginData = await loginResponse.json()
+        localStorage.setItem('access_token', loginData.access_token)
+
+        // Mostra o fluxo de pagamento
+        setPaymentFlowData({
+          clientSecret: loginData.clientSecret,
+          subscriptionId: loginData.subscriptionId,
+        })
+        setShowPaymentFlow(true)
+      } else {
+        toast.success('Cadastro realizado com sucesso!')
+        router.push('/login')
+      }
     } catch (error: any) {
       toast.error(error.message || 'Erro ao cadastrar')
       console.error('Erro no cadastro:', error)
     } finally {
       setIsLoading(false)
     }
-  }
-
-  const formatDocument = (value: string) => {
-    return value.replace(/\D/g, '')
   }
 
   const formatCPForCNPJ = (value: string) => {
@@ -478,6 +610,11 @@ export default function Signup() {
       ...prev,
       zipCode: formattedValue,
     }))
+
+    // Busca automática quando o CEP estiver completo
+    if (formattedValue.length === 9) {
+      fetchAddressByZipCode(formattedValue)
+    }
   }
 
   const handleDocumentTypeChange = (value: string) => {
@@ -505,15 +642,48 @@ export default function Signup() {
     }
   }
 
+  const handlePaymentComplete = async () => {
+    const signupData = JSON.parse(localStorage.getItem('signup_data') || '{}')
+
+    try {
+      const loginResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}auth/login`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: signupData.email,
+            password: signupData.password,
+          }),
+        }
+      )
+
+      if (!loginResponse.ok) {
+        throw new Error('Falha no login automático')
+      }
+
+      const loginData = await loginResponse.json()
+      localStorage.setItem('access_token', loginData.access_token)
+      localStorage.removeItem('signup_data')
+
+      toast.success('Cadastro e pagamento realizados com sucesso!')
+      router.push('/dashboard')
+    } catch (error) {
+      toast.error('Cadastro realizado, mas falha no login automático')
+      router.push('/login')
+    }
+  }
+
   if (showPaymentFlow) {
     return (
       <main className='min-h-screen bg-gray-50 dark:bg-gray-900'>
         <Header />
         <div className='max-w-4xl mx-auto py-12 px-4'>
-          <h1 className='text-2xl font-bold mb-8 text-center'>
-            Escolha seu plano de assinatura
-          </h1>
-          {/* Payment flow component would go here */}
+          <Elements stripe={stripePromise}>
+            <PaymentFlow onComplete={handlePaymentComplete} />
+          </Elements>
         </div>
         <Footer />
       </main>
@@ -810,71 +980,206 @@ export default function Signup() {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.3 }}
-                  className='space-y-5'
+                  className='space-y-6'
                 >
-                  <div className='space-y-4'>
-                    <AnimatedInput
-                      label='Endereço completo'
-                      name='street'
-                      value={formData.street}
-                      onChange={handleChange}
-                      error={errors.street}
-                      placeholder='Rua, número, complemento'
-                      required
-                      icon={<MapPin className='h-4 w-4 text-gray-500' />}
-                    />
+                  <div className='bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mb-4'>
+                    <h3 className='text-lg font-semibold text-blue-800 dark:text-blue-200 flex items-center gap-2'>
+                      <MapPin className='h-5 w-5' />
+                      Endereço Profissional
+                    </h3>
+                    <p className='text-sm text-blue-600 dark:text-blue-300 mt-1'>
+                      Informe o CEP para preenchermos automaticamente seu
+                      endereço
+                    </p>
+                  </div>
 
-                    <div className='grid grid-cols-2 gap-4'>
+                  <div className='grid grid-cols-1 gap-6'>
+                    {/* Campo de CEP com busca automática */}
+                    <div className='relative'>
                       <AnimatedInput
-                        label='Cidade'
-                        name='city'
-                        value={formData.city}
-                        onChange={handleChange}
-                        error={errors.city}
+                        label='CEP'
+                        name='zipCode'
+                        value={formData.zipCode}
+                        onChange={handleZipCodeChange}
+                        error={errors.zipCode}
+                        placeholder='00000-000'
+                        maxLength={9}
                         required
-                      />
-
-                      <div className='space-y-2'>
-                        <Label htmlFor='state'>Estado</Label>
-                        <Select
-                          value={formData.state}
-                          onValueChange={(value) =>
-                            handleSelectChange('state', value)
-                          }
-                        >
-                          <SelectTrigger
-                            id='state'
-                            className={errors.state ? 'border-red-500' : ''}
+                        icon={
+                          <svg
+                            xmlns='http://www.w3.org/2000/svg'
+                            className='h-5 w-5 text-gray-500'
+                            fill='none'
+                            viewBox='0 0 24 24'
+                            stroke='currentColor'
                           >
-                            <SelectValue placeholder='Selecione' />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {brazilianStates.map((state) => (
-                              <SelectItem key={state} value={state}>
-                                {state}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {errors.state && (
-                          <p className='text-xs text-red-500'>{errors.state}</p>
-                        )}
-                      </div>
+                            <path
+                              strokeLinecap='round'
+                              strokeLinejoin='round'
+                              strokeWidth={2}
+                              d='M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z'
+                            />
+                            <path
+                              strokeLinecap='round'
+                              strokeLinejoin='round'
+                              strokeWidth={2}
+                              d='M15 11a3 3 0 11-6 0 3 3 0 016 0z'
+                            />
+                          </svg>
+                        }
+                      />
+                      {formData.zipCode.length === 9 && (
+                        <button
+                          type='button'
+                          onClick={() =>
+                            fetchAddressByZipCode(formData.zipCode)
+                          }
+                          className='absolute right-2 top-8 text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 px-2 py-1 rounded-md transition-colors'
+                        >
+                          Buscar
+                        </button>
+                      )}
                     </div>
 
-                    <AnimatedInput
-                      label='CEP'
-                      name='zipCode'
-                      value={formData.zipCode}
-                      onChange={handleZipCodeChange}
-                      error={errors.zipCode}
-                      placeholder='00000-000'
-                      maxLength={9}
-                      required
-                    />
+                    {/* Campos de endereço que aparecem após a busca */}
+                    {formData.street && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        transition={{ duration: 0.3 }}
+                        className='space-y-4'
+                      >
+                        <AnimatedInput
+                          label='Endereço'
+                          name='street'
+                          value={formData.street}
+                          onChange={handleChange}
+                          error={errors.street}
+                          placeholder='Rua, número, complemento'
+                          required
+                          icon={<MapPin className='h-5 w-5 text-gray-500' />}
+                        />
+
+                        {/* Linha da Cidade e Estado */}
+                        <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+                          {/* Estado */}
+                          <div className='w-full'>
+                            <Select
+                              value={formData.state}
+                              onValueChange={(value) =>
+                                handleSelectChange('state', value)
+                              }
+                            >
+                              <SelectTrigger
+                                className={`w-full ${
+                                  errors.state ? 'border-red-500' : 'border'
+                                }`}
+                              >
+                                <SelectValue placeholder='Estado' />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {brazilianStates.map((state) => (
+                                  <SelectItem key={state} value={state}>
+                                    <div className='flex items-center gap-2'>
+                                      <span className='font-medium'>
+                                        {state}
+                                      </span>
+                                      <span className='text-xs text-gray-500 dark:text-gray-400'>
+                                        {getStateName(state)}
+                                      </span>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {errors.state && (
+                              <p className='mt-1 text-xs text-red-500'>
+                                {errors.state}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Cidade */}
+                          <div className='md:col-span-2'>
+                            {loadingCities ? (
+                              <div className='flex items-center justify-center h-12'>
+                                <Loader2 className='h-4 w-4 animate-spin' />
+                              </div>
+                            ) : (
+                              <Select
+                                value={formData.city}
+                                onValueChange={(value) =>
+                                  handleSelectChange('city', value)
+                                }
+                                disabled={
+                                  !formData.state || cities.length === 0
+                                }
+                              >
+                                <SelectTrigger
+                                  className={`w-full ${
+                                    errors.city ? 'border-red-500' : 'border'
+                                  }`}
+                                >
+                                  <SelectValue
+                                    placeholder={
+                                      formData.state
+                                        ? 'Selecione sua cidade'
+                                        : 'Selecione o estado primeiro'
+                                    }
+                                  />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {/* Mostra a cidade encontrada pelo CEP como primeira opção */}
+                                  {formData.city && (
+                                    <SelectItem
+                                      key='auto-filled-city'
+                                      value={formData.city}
+                                    >
+                                      {formData.city} (auto-preenchido)
+                                    </SelectItem>
+                                  )}
+                                  {/* Lista todas as cidades disponíveis para o estado */}
+                                  {cities
+                                    .filter((city) => city !== formData.city) // Remove a cidade já mostrada
+                                    .map((city) => (
+                                      <SelectItem key={city} value={city}>
+                                        {city}
+                                      </SelectItem>
+                                    ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                            {errors.city && (
+                              <p className='mt-1 text-xs text-red-500'>
+                                {errors.city}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className='bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700'>
+                          <div className='flex items-center justify-between'>
+                            <div>
+                              <p className='text-sm font-medium text-gray-700 dark:text-gray-300'>
+                                País
+                              </p>
+                              <p className='text-sm'>Brasil</p>
+                            </div>
+                            <Image
+                              src='/flags/brazil-flag.svg'
+                              alt='Bandeira do Brasil'
+                              width={24}
+                              height={24}
+                              className='h-6 w-auto rounded-sm'
+                            />
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
                   </div>
                 </motion.div>
               )}
+
               {currentStep === 4 && (
                 <motion.div
                   key='step4'
@@ -884,113 +1189,140 @@ export default function Signup() {
                   transition={{ duration: 0.3 }}
                   className='space-y-5'
                 >
-                  <div className='space-y-6'>
-                    <div className='text-center mb-4'>
-                      <h3 className='text-lg font-semibold mb-2'>
-                        Escolha seu plano
-                      </h3>
-                      <p className='text-sm text-gray-500 dark:text-gray-400'>
-                        Selecione o plano que melhor atende às suas necessidades
-                      </p>
-                    </div>
+                  {selectedPlanId ? (
+                    <Elements stripe={stripePromise}>
+                      <PaymentFlow
+                        onComplete={() => {
+                          toast.success(
+                            'Cadastro e pagamento realizados com sucesso!'
+                          )
+                          router.push('/dashboard')
+                        }}
+                      />
+                    </Elements>
+                  ) : (
+                    <>
+                      <div className='space-y-6'>
+                        <div className='text-center mb-4'>
+                          <h3 className='text-lg font-semibold mb-2'>
+                            Escolha seu plano
+                          </h3>
+                          <p className='text-sm text-gray-500 dark:text-gray-400'>
+                            Selecione o plano que melhor atende às suas
+                            necessidades
+                          </p>
+                        </div>
 
-                    {errors.plan && (
-                      <div className='bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-3 rounded-md text-sm text-center'>
-                        {errors.plan}
-                      </div>
-                    )}
+                        {errors.plan && (
+                          <div className='bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-3 rounded-md text-sm text-center'>
+                            {errors.plan}
+                          </div>
+                        )}
 
-                    {loadingPlans ? (
-                      <div className='flex justify-center py-8'>
-                        <Loader2 className='h-8 w-8 animate-spin' />
-                      </div>
-                    ) : (
-                      <div className='flex flex-wrap justify-center gap-4'>
-                        {plans.map((plan) => (
-                          <Card
-                            key={plan.id}
-                            className={`cursor-pointer transition-all h-full flex flex-col ${
-                              selectedPlanId === plan.id
-                                ? 'ring-2 ring-blue-500 bg-blue-100 dark:bg-blue-900/20'
-                                : 'hover:border-blue-300 hover:shadow-md'
-                            }`}
-                            onClick={() => setSelectedPlanId(plan.id)}
-                          >
-                            <CardHeader className='pb-3'>
-                              <CardTitle className='text-lg'>
-                                {plan.name}
-                              </CardTitle>
-                              <CardDescription className='text-sm min-h-[40px]'>
-                                {plan.description}
-                              </CardDescription>
-                            </CardHeader>
-                            <CardContent className='flex-grow pb-4'>
-                              <div className='text-2xl font-bold mb-4'>
-                                R$ {plan.price.toFixed(2).replace('.', ',')}
-                                <span className='text-sm font-normal text-gray-500 dark:text-gray-400'>
-                                  /mês
-                                </span>
-                              </div>
-                              <ul className='space-y-2'>
-                                {plan.features.map((feature) => (
-                                  <li
-                                    key={feature.id}
-                                    className='flex items-start'
-                                  >
-                                    <Check className='h-4 w-4 text-blue-500 mr-2 mt-0.5 flex-shrink-0' />
-                                    <span className='text-sm'>
-                                      {feature.name}
-                                    </span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </CardContent>
-                            <CardFooter className='pt-0'>
-                              <Button
-                                variant={
+                        {loadingPlans ? (
+                          <div className='flex justify-center py-8'>
+                            <Loader2 className='h-8 w-8 animate-spin' />
+                          </div>
+                        ) : (
+                          <div className='flex flex-wrap justify-center gap-4'>
+                            {plans.map((plan) => (
+                              <Card
+                                key={plan.id}
+                                className={`cursor-pointer transition-all h-full flex flex-col ${
                                   selectedPlanId === plan.id
-                                    ? 'default'
-                                    : 'outline'
-                                }
-                                className={`w-full ${
-                                  selectedPlanId === plan.id
-                                    ? 'bg-blue-600 hover:bg-blue-700'
-                                    : ''
+                                    ? 'ring-2 ring-blue-500 bg-blue-100 dark:bg-blue-900/20'
+                                    : 'hover:border-blue-300 hover:shadow-md'
                                 }`}
-                                size='sm'
+                                onClick={() => setSelectedPlanId(plan.id)}
                               >
-                                {selectedPlanId === plan.id
-                                  ? 'Selecionado'
-                                  : 'Selecionar'}
-                              </Button>
-                            </CardFooter>
-                          </Card>
-                        ))}
+                                <CardHeader className='pb-3'>
+                                  <CardTitle className='text-lg'>
+                                    {plan.name}
+                                  </CardTitle>
+                                  <CardDescription className='text-sm min-h-[40px]'>
+                                    {plan.description}
+                                  </CardDescription>
+                                </CardHeader>
+                                <CardContent className='flex-grow pb-4'>
+                                  <div className='text-2xl font-bold mb-4'>
+                                    R$ {plan.price.toFixed(2).replace('.', ',')}
+                                    <span className='text-sm font-normal text-gray-500 dark:text-gray-400'>
+                                      /mês
+                                    </span>
+                                  </div>
+                                  <ul className='space-y-2'>
+                                    <li className='flex'>
+                                      <Check className='h-5 w-5 text-green-500 mr-2 flex-shrink-0' />
+                                      <span className='text-sm'>
+                                        {plan.serviceLimit} serviços
+                                      </span>
+                                    </li>
+                                    <li className='flex'>
+                                      <Check className='h-5 w-5 text-green-500 mr-2 flex-shrink-0' />
+                                      <span className='text-sm'>
+                                        {plan.monthlyAppointmentsLimit}{' '}
+                                        agendamentos/mês
+                                      </span>
+                                    </li>
+                                    <li className='flex'>
+                                      <Check className='h-5 w-5 text-green-500 mr-2 flex-shrink-0' />
+                                      <span className='text-sm'>
+                                        {plan.trialPeriodDays > 0
+                                          ? `${plan.trialPeriodDays} dias grátis`
+                                          : 'Sem período de teste'}
+                                      </span>
+                                    </li>
+                                  </ul>
+                                </CardContent>
+                                <CardFooter className='pt-0'>
+                                  <Button
+                                    variant={
+                                      selectedPlanId === plan.id
+                                        ? 'default'
+                                        : 'outline'
+                                    }
+                                    className={`w-full ${
+                                      selectedPlanId === plan.id
+                                        ? 'bg-blue-600 hover:bg-blue-700'
+                                        : ''
+                                    }`}
+                                    size='sm'
+                                  >
+                                    {selectedPlanId === plan.id
+                                      ? 'Selecionado'
+                                      : 'Selecionar'}
+                                  </Button>
+                                </CardFooter>
+                              </Card>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
 
-                  <div className='flex gap-4 mt-6'>
-                    <Button
-                      type='button'
-                      onClick={handlePrevStep}
-                      variant='outline'
-                      className='flex-1'
-                    >
-                      Voltar
-                    </Button>
-                    <Button
-                      type='button'
-                      onClick={handleNextStep}
-                      className='flex-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800'
-                      disabled={
-                        loadingPlans ||
-                        (formData.userType === 'PROVIDER' && !selectedPlanId)
-                      }
-                    >
-                      Próximo
-                    </Button>
-                  </div>
+                      <div className='flex gap-4 mt-6'>
+                        <Button
+                          type='button'
+                          onClick={handlePrevStep}
+                          variant='outline'
+                          className='flex-1'
+                        >
+                          Voltar
+                        </Button>
+                        <Button
+                          type='button'
+                          onClick={handleNextStep}
+                          className='flex-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800'
+                          disabled={
+                            loadingPlans ||
+                            (formData.userType === 'PROVIDER' &&
+                              !selectedPlanId)
+                          }
+                        >
+                          Próximo
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 </motion.div>
               )}
               {currentStep === 5 && (

@@ -1,19 +1,30 @@
 'use client'
-
 import { useState } from 'react'
 import { PlanSelection } from '../../plans/components/plan-selection'
 import { CheckoutForm } from '../../components/checkout-form'
 import { PaymentConfirmation } from './payment-confirmation'
 import { Card } from '@/components/ui/card'
 import { Steps } from '../../components/steps'
+import { loadStripe } from '@stripe/stripe-js'
+import { Elements } from '@stripe/react-stripe-js'
+import { useRouter } from 'next/navigation'
+
+const stripePromise = loadStripe(
+  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
+)
 
 export type Plan = {
-  id: string
+  id: number
   name: string
+  price: number
   description: string
-  priceMonthly: number
-  priceAnnual: number
-  features: string[]
+  billingInterval: 'month' | 'year'
+  trialPeriodDays: number
+  stripeProductId: string
+  stripePriceId: string
+  isActive: boolean
+  serviceLimit: number
+  monthlyAppointmentsLimit: number
 }
 
 export type PaymentMethod = 'credit_card' | 'pix' | 'boleto'
@@ -22,11 +33,10 @@ export type PaymentDetails = {
   plan: Plan | null
   billingCycle: 'monthly' | 'annual'
   paymentMethod: PaymentMethod
-  cardDetails?: {
-    number: string
-    name: string
-    expiry: string
-    cvc: string
+  subscription?: {
+    id: string
+    status: string
+    requiresAction?: boolean
   }
 }
 
@@ -41,6 +51,7 @@ export interface PaymentFlowProps {
 }
 
 export function PaymentFlow({ onComplete }: PaymentFlowProps) {
+  const router = useRouter()
   const [currentStep, setCurrentStep] = useState('plan')
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails>({
     plan: null,
@@ -49,8 +60,14 @@ export function PaymentFlow({ onComplete }: PaymentFlowProps) {
   })
   const [isProcessing, setIsProcessing] = useState(false)
   const [isComplete, setIsComplete] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handlePlanSelect = (plan: Plan, billingCycle: 'monthly' | 'annual') => {
+    if (!plan.price || typeof plan.price !== 'number') {
+      console.error('Invalid price detected!')
+      plan.price = 0
+    }
+
     setPaymentDetails({
       ...paymentDetails,
       plan,
@@ -59,23 +76,67 @@ export function PaymentFlow({ onComplete }: PaymentFlowProps) {
     setCurrentStep('payment')
   }
 
-  const handlePaymentSubmit = (
+  const handlePaymentSubmit = async (
     method: PaymentMethod,
-    cardDetails?: PaymentDetails['cardDetails']
+    paymentMethodId: string
   ) => {
-    setPaymentDetails({
-      ...paymentDetails,
-      paymentMethod: method,
-      cardDetails,
-    })
-    setIsProcessing(true)
+    if (!paymentDetails.plan) return
 
-    setTimeout(() => {
-      setIsProcessing(false)
+    setIsProcessing(true)
+    setError(null)
+
+    try {
+      const token =
+        localStorage.getItem('access_token') ||
+        sessionStorage.getItem('access_token')
+      if (!token) {
+        throw new Error('Usuário não autenticado')
+      }
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}payments/subscriptions`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            planId: paymentDetails.plan.id,
+            paymentMethodId,
+          }),
+        }
+      )
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Falha ao criar assinatura')
+      }
+
+      const subscriptionData = await response.json()
+
+      setPaymentDetails({
+        ...paymentDetails,
+        subscription: {
+          id: subscriptionData.subscriptionId,
+          status: subscriptionData.status,
+          requiresAction: subscriptionData.requiresAction,
+        },
+      })
+
       setIsComplete(true)
       setCurrentStep('confirmation')
       if (onComplete) onComplete()
-    }, 2000)
+    } catch (err) {
+      console.error('Erro no pagamento:', err)
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Ocorreu um erro ao processar seu pagamento'
+      )
+    } finally {
+      setIsProcessing(false)
+    }
   }
 
   const handleNewPayment = () => {
@@ -86,35 +147,44 @@ export function PaymentFlow({ onComplete }: PaymentFlowProps) {
     })
     setIsComplete(false)
     setCurrentStep('plan')
+    router.refresh()
   }
 
   return (
-    <div className='max-w-3xl mx-auto'>
-      <Steps steps={steps} currentStep={currentStep} />
+    <Elements stripe={stripePromise}>
+      <div className='max-w-3xl mx-auto'>
+        <Steps steps={steps} currentStep={currentStep} />
 
-      <Card className='mt-8'>
-        {currentStep === 'plan' && (
-          <PlanSelection onSelectPlan={handlePlanSelect} />
+        {error && (
+          <div className='bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4'>
+            {error}
+          </div>
         )}
 
-        {currentStep === 'payment' && paymentDetails.plan && (
-          <CheckoutForm
-            plan={paymentDetails.plan}
-            billingCycle={paymentDetails.billingCycle}
-            onSubmit={handlePaymentSubmit}
-            isProcessing={isProcessing}
-          />
-        )}
+        <Card className='mt-8'>
+          {currentStep === 'plan' && (
+            <PlanSelection onSelectPlan={handlePlanSelect} />
+          )}
 
-        {currentStep === 'confirmation' &&
-          isComplete &&
-          paymentDetails.plan && (
-            <PaymentConfirmation
-              paymentDetails={paymentDetails}
-              onNewPayment={handleNewPayment}
+          {currentStep === 'payment' && paymentDetails.plan && (
+            <CheckoutForm
+              plan={paymentDetails.plan}
+              billingCycle={paymentDetails.billingCycle}
+              onSubmit={handlePaymentSubmit}
+              isProcessing={isProcessing}
             />
           )}
-      </Card>
-    </div>
+
+          {currentStep === 'confirmation' &&
+            isComplete &&
+            paymentDetails.plan && (
+              <PaymentConfirmation
+                paymentDetails={paymentDetails}
+                onNewPayment={handleNewPayment}
+              />
+            )}
+        </Card>
+      </div>
+    </Elements>
   )
 }

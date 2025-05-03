@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -12,58 +12,36 @@ import {
 } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import Link from 'next/link'
+import { fetchPlans, type Plan } from '../services/plans'
 
 export function PricingPlans() {
   const [billingCycle, setBillingCycle] = useState('monthly')
+  const [plans, setPlans] = useState<Plan[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const plans = [
-    {
-      name: 'BÁSICO',
-      description: 'Para profissionais autônomos',
-      priceMonthly: 49.9,
-      priceAnnual: 508.8,
-      features: [
-        'Emissão de 20 notas fiscais por mês',
-        'Controle de 10 clientes',
-        'Agenda de compromissos',
-        'Agenda de compromissos',
-        'Suporte por email',
-      ],
-      cta: 'Assinar Plano',
-      popular: false,
-    },
-    {
-      name: 'PRO',
-      description: 'Para pequenas empresas',
-      priceMonthly: 89.9,
-      priceAnnual: 712.9,
-      features: [
-        'Emissão de 50 notas fiscais por mês',
-        'Controle de 30 clientes',
-        'Agenda de compromissos',
-        'Relatórios financeiros',
-        'Suporte prioritário',
-      ],
-      cta: 'Assinar Plano',
-      popular: true,
-    },
-    {
-      name: 'PRO+',
-      description: 'Para empresas em crescimento',
-      priceMonthly: 149.9,
-      priceAnnual: 916.9,
-      features: [
-        'Emissão ilimitada de notas fiscais',
-        'Controle ilimitado de clientes',
-        'Agenda de compromissos',
-        'Relatórios financeiros avançados',
-        'Integração com sistemas de contabilidade',
-        'Suporte 24/7',
-      ],
-      cta: 'Assinar Plano',
-      popular: false,
-    },
-  ]
+  useEffect(() => {
+    const loadPlans = async () => {
+      try {
+        const data = await fetchPlans()
+        setPlans(data)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load plans')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadPlans()
+  }, [])
+
+  if (loading) {
+    return <div className='text-center py-8'>Carregando planos...</div>
+  }
+
+  if (error) {
+    return <div className='text-center py-8 text-red-500'>{error}</div>
+  }
 
   return (
     <div>
@@ -81,77 +59,88 @@ export function PricingPlans() {
       </div>
 
       <div className='grid gap-6 md:grid-cols-3'>
-        {plans.map((plan) => (
-          <Card
-            key={plan.name}
-            className={`flex flex-col bg-card text-card-foreground ${
-              plan.popular
-                ? 'border-blue-500 dark:border-blue-400 shadow-lg'
-                : ''
-            }`}
-          >
-            {plan.popular && (
-              <div className='bg-blue-500 text-white text-center py-1 text-xs font-medium'>
-                MAIS POPULAR
-              </div>
-            )}
-            <CardHeader>
-              <CardTitle className='text-center'>
-                <div className='text-lg font-bold'>{plan.name}</div>
-                <div className='text-sm font-normal text-gray-500 mt-1'>
-                  {plan.description}
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className='flex-grow'>
-              <div className='text-center mb-6'>
-                <div className='inline-flex items-baseline'>
-                  <span className='text-3xl font-bold'>
-                    R$
-                    {billingCycle === 'monthly'
-                      ? plan.priceMonthly.toFixed(2)
-                      : plan.priceAnnual.toFixed(2)}
-                  </span>
-                  <span className='text-sm text-gray-500 ml-1'>
-                    /{billingCycle === 'monthly' ? 'mês' : 'ano'}
-                  </span>
-                </div>
-                {billingCycle === 'annual' && (
-                  <div className='text-sm text-green-600 mt-1'>
-                    Economize{' '}
-                    {Math.round(
-                      (1 - plan.priceAnnual / (plan.priceMonthly * 12)) * 100
-                    )}
-                    %
-                  </div>
-                )}
-              </div>
+        {plans.map((plan, index) => {
+          const isPopular = index === 1 // Make the middle plan popular
+          const price =
+            billingCycle === 'monthly' ? plan.price : plan.price * 12 * 0.9 // 10% discount for annual
 
-              <ul className='space-y-3'>
-                {plan.features.map((feature, index) => (
-                  <li key={index} className='flex'>
+          return (
+            <Card
+              key={plan.id}
+              className={`flex flex-col bg-card text-card-foreground ${
+                isPopular
+                  ? 'border-blue-500 dark:border-blue-400 shadow-lg'
+                  : ''
+              }`}
+            >
+              {isPopular && (
+                <div className='bg-blue-500 text-white text-center py-1 text-xs font-medium'>
+                  MAIS POPULAR
+                </div>
+              )}
+              <CardHeader>
+                <CardTitle className='text-center'>
+                  <div className='text-lg font-bold'>{plan.name}</div>
+                  <div className='text-sm font-normal text-gray-500 mt-1'>
+                    {plan.description}
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className='flex-grow'>
+                <div className='text-center mb-6'>
+                  <div className='inline-flex items-baseline'>
+                    <span className='text-3xl font-bold'>
+                      R${price.toFixed(2)}
+                    </span>
+                    <span className='text-sm text-gray-500 ml-1'>
+                      /{billingCycle === 'monthly' ? 'mês' : 'ano'}
+                    </span>
+                  </div>
+                  {billingCycle === 'annual' && (
+                    <div className='text-sm text-green-600 mt-1'>
+                      Economize 10%
+                    </div>
+                  )}
+                </div>
+
+                <ul className='space-y-3'>
+                  <li className='flex'>
                     <Check className='h-5 w-5 text-green-500 mr-2 flex-shrink-0' />
-                    <span className='text-sm'>{feature}</span>
+                    <span className='text-sm'>
+                      {plan.serviceLimit} serviços
+                    </span>
                   </li>
-                ))}
-              </ul>
-            </CardContent>
-            <CardFooter>
-              <Button
-                className={`w-full ${
-                  plan.popular ? 'bg-blue-600 hover:bg-blue-700' : ''
-                }`}
-                asChild
-              >
-                <Link
-                  href={`/dashboard/payment?plan=${plan.name.toLowerCase()}`}
+                  <li className='flex'>
+                    <Check className='h-5 w-5 text-green-500 mr-2 flex-shrink-0' />
+                    <span className='text-sm'>
+                      {plan.monthlyAppointmentsLimit} agendamentos/mês
+                    </span>
+                  </li>
+                  <li className='flex'>
+                    <Check className='h-5 w-5 text-green-500 mr-2 flex-shrink-0' />
+                    <span className='text-sm'>
+                      {plan.trialPeriodDays > 0
+                        ? `${plan.trialPeriodDays} dias grátis`
+                        : 'Sem período de teste'}
+                    </span>
+                  </li>
+                </ul>
+              </CardContent>
+              <CardFooter>
+                <Button
+                  className={`w-full ${
+                    isPopular ? 'bg-blue-600 hover:bg-blue-700' : ''
+                  }`}
+                  asChild
                 >
-                  {plan.cta}
-                </Link>
-              </Button>
-            </CardFooter>
-          </Card>
-        ))}
+                  <Link href={`/dashboard/payment?plan=${plan.id}`}>
+                    Assinar Plano
+                  </Link>
+                </Button>
+              </CardFooter>
+            </Card>
+          )
+        })}
       </div>
 
       <div className='mt-12 text-center'>

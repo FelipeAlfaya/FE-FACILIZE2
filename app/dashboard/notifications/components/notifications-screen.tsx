@@ -254,6 +254,16 @@ export function NotificationsScreen() {
   const [selectedNotification, setSelectedNotification] =
     useState<Notification | null>(null)
   const { user, loading: userLoading } = useUser()
+  const [token, setToken] = useState<string | null>(null)
+
+  useEffect(() => {
+    const token =
+      typeof window !== 'undefined'
+        ? localStorage.getItem('access_token') ||
+          sessionStorage.getItem('access_token')
+        : null
+    setToken(token)
+  }, [])
 
   const router = useRouter()
 
@@ -319,10 +329,6 @@ export function NotificationsScreen() {
 
     setDeleteDialogOpen(true)
   }
-
-  const token =
-    localStorage.getItem('access_token') ||
-    sessionStorage.getItem('access_token')
 
   const confirmDelete = async () => {
     if (!notificationToDelete || !token) return

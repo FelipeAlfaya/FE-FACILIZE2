@@ -1,71 +1,52 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Check, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { CardContent } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import type { Plan } from '../../payment/components/payment-flow'
+import { fetchPlans, type Plan } from '../services/plans'
 
 type PlanSelectionProps = {
   onSelectPlan: (plan: Plan, billingCycle: 'monthly' | 'annual') => void
 }
-
-const plans: Plan[] = [
-  {
-    id: 'basic',
-    name: 'BÁSICO',
-    description: 'Para profissionais autônomos',
-    priceMonthly: 49.9,
-    priceAnnual: 508.8,
-    features: [
-      'Emissão de 20 notas fiscais por mês',
-      'Controle de 10 clientes',
-      'Agenda de compromissos',
-      'Suporte por email',
-    ],
-  },
-  {
-    id: 'pro',
-    name: 'PRO',
-    description: 'Para pequenas empresas',
-    priceMonthly: 89.9,
-    priceAnnual: 712.9,
-    features: [
-      'Emissão de 50 notas fiscais por mês',
-      'Controle de 30 clientes',
-      'Agenda de compromissos',
-      'Relatórios financeiros',
-      'Suporte prioritário',
-    ],
-  },
-  {
-    id: 'proplus',
-    name: 'PRO+',
-    description: 'Para empresas em crescimento',
-    priceMonthly: 149.9,
-    priceAnnual: 916.9,
-    features: [
-      'Emissão ilimitada de notas fiscais',
-      'Controle ilimitado de clientes',
-      'Agenda de compromissos',
-      'Relatórios financeiros avançados',
-      'Integração com sistemas de contabilidade',
-      'Suporte 24/7',
-    ],
-  },
-]
 
 export function PlanSelection({ onSelectPlan }: PlanSelectionProps) {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>(
     'monthly'
   )
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null)
+  const [plans, setPlans] = useState<Plan[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const loadPlans = async () => {
+      try {
+        const data = await fetchPlans()
+        setPlans(data)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load plans')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadPlans()
+  }, [])
 
   const handleContinue = () => {
     if (selectedPlan) {
       onSelectPlan(selectedPlan, billingCycle)
     }
+  }
+
+  if (loading) {
+    return <div className='p-6 text-center'>Carregando planos...</div>
+  }
+
+  if (error) {
+    return <div className='p-6 text-center text-red-500'>{error}</div>
   }
 
   return (
@@ -91,15 +72,15 @@ export function PlanSelection({ onSelectPlan }: PlanSelectionProps) {
         {plans.map((plan) => {
           const isSelected = selectedPlan?.id === plan.id
           const price =
-            billingCycle === 'monthly' ? plan.priceMonthly : plan.priceAnnual
+            billingCycle === 'monthly' ? plan.price : plan.price * 12 * 0.9 // 10% discount for annual
 
           return (
             <div
               key={plan.id}
               className={`border rounded-lg p-4 cursor-pointer transition-all ${
                 isSelected
-                  ? 'border-blue-600 bg-blue-50'
-                  : 'border-gray-200 hover:border-blue-300'
+                  ? 'border-blue-600 bg-blue-50 text-black'
+                  : 'border hover:border-blue-300'
               }`}
               onClick={() => setSelectedPlan(plan)}
             >
@@ -124,22 +105,28 @@ export function PlanSelection({ onSelectPlan }: PlanSelectionProps) {
                 </div>
                 {billingCycle === 'annual' && (
                   <div className='text-sm text-green-600 mt-1'>
-                    Economize{' '}
-                    {Math.round(
-                      (1 - plan.priceAnnual / (plan.priceMonthly * 12)) * 100
-                    )}
-                    %
+                    Economize 10%
                   </div>
                 )}
               </div>
 
               <ul className='space-y-2 mb-4'>
-                {plan.features.map((feature, index) => (
-                  <li key={index} className='flex text-sm'>
-                    <Check className='h-4 w-4 text-green-500 mr-2 flex-shrink-0 mt-0.5' />
-                    <span>{feature}</span>
-                  </li>
-                ))}
+                <li className='flex text-sm'>
+                  <Check className='h-4 w-4 text-green-500 mr-2 flex-shrink-0 mt-0.5' />
+                  <span>{plan.serviceLimit} serviços</span>
+                </li>
+                <li className='flex text-sm'>
+                  <Check className='h-4 w-4 text-green-500 mr-2 flex-shrink-0 mt-0.5' />
+                  <span>{plan.monthlyAppointmentsLimit} agendamentos/mês</span>
+                </li>
+                <li className='flex text-sm'>
+                  <Check className='h-4 w-4 text-green-500 mr-2 flex-shrink-0 mt-0.5' />
+                  <span>
+                    {plan.trialPeriodDays > 0
+                      ? `${plan.trialPeriodDays} dias grátis`
+                      : 'Sem período de teste'}
+                  </span>
+                </li>
               </ul>
             </div>
           )
