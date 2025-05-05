@@ -78,7 +78,7 @@ export default function SignupForm() {
 
   const getTotalSteps = () => {
     if (formData.userType === 'CLIENT') {
-      return 2 // Account Type, Personal Info
+      return 3 // Account Type, Personal Info
     }
     // Provider
     if (formData.providerType === 'TEAM') {
