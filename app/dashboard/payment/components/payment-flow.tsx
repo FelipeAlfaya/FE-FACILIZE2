@@ -48,9 +48,10 @@ const steps = [
 
 export interface PaymentFlowProps {
   onComplete?: () => void | Promise<void>
+  initialPlan?: Plan | null
 }
 
-export function PaymentFlow({ onComplete }: PaymentFlowProps) {
+export function PaymentFlow({ onComplete, initialPlan }: PaymentFlowProps) {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState('plan')
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails>({
@@ -180,7 +181,15 @@ export function PaymentFlow({ onComplete }: PaymentFlowProps) {
             paymentDetails.plan && (
               <PaymentConfirmation
                 paymentDetails={paymentDetails}
-                onNewPayment={handleNewPayment}
+                onNewPayment={() => {
+                  setPaymentDetails({
+                    plan: null,
+                    billingCycle: 'monthly',
+                    paymentMethod: 'credit_card',
+                  })
+                  setIsComplete(false)
+                  setCurrentStep('plan')
+                }}
               />
             )}
         </Card>

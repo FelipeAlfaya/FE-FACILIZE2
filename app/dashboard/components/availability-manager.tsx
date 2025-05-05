@@ -213,7 +213,6 @@ export function AvailabilityManager({
     setIsLoading(true)
 
     try {
-      // In a real app, you would send this data to your API
       // await fetch(`${process.env.NEXT_PUBLIC_API_URL}/providers/${providerId}/availability`, {
       //   method: 'PUT',
       //   headers: { 'Content-Type': 'application/json' },
@@ -448,3 +447,4 @@ export function AvailabilityManager({
     </Card>
   )
 }
+

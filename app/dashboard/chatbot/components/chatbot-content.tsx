@@ -1,4 +1,3 @@
-// Create a new file: app/dashboard/chatbot/components/chatbot-content.tsx
 'use client'
 
 import { DashboardHeader } from '../../components/dashboard-header'
@@ -103,3 +102,4 @@ export function ChatbotContent() {
     </div>
   )
 }
+

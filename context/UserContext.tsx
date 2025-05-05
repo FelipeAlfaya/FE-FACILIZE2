@@ -9,32 +9,68 @@ import {
 } from 'react'
 import { useRouter } from 'next/navigation'
 
+interface Plan {
+  id: number
+  name: string
+  price: number
+  description: string
+  billingInterval: string
+  trialPeriodDays: number
+  stripeProductId: string
+  stripePriceId: string
+  isActive: boolean
+  serviceLimit: number
+  monthlyAppointmentsLimit: number
+  createdAt: string
+  deletedAt: string | null
+  updatedAt: string
+}
+
+interface ProviderData {
+  id: number
+  cpf: string | null
+  cnpj: string | null
+  description: string
+  userId: number
+  planId: number
+  provider_rating: number | null
+  stripeSubscriptionId: string | null
+  subscriptionStatus: 'active' | 'inactive' | null
+  lastPaymentDate: string | null
+  nextPaymentDate: string | null
+  specialty: string
+  providerType: 'INDIVIDUAL' | 'TEAM'
+  companyName: string | null
+  tradeName: string | null
+  companyType: string | null
+  legalRepresentative: string | null
+  legalRepresentativeDocument: string | null
+  foundationDate: string | null
+  companyPhone: string | null
+  companyDescription: string | null
+  plan: Plan
+}
+
+interface ClientData {
+  id: number
+  userId: number
+  cpf: string
+  client_rating: number | null
+}
+
 interface UserData {
   id: number
   email: string
   name: string
   avatar: string | null
   phone: string | null
-  type: string
-  provider?: {
-    id: number
-    cpf: string
-    cnpj: string | null
-    description: string
-    planId: number
-    specialty: string
-  }
-  client?: {
-    id: number
-    cpf: string
-  }
-  address?: {
-    street: string
-    city: string
-    state: string
-    zip: string
-    country: string
-  }
+  stripeCustomerId: string | null
+  type: 'CLIENT' | 'PROVIDER'
+  createdAt: string
+  updatedAt: string
+  deletedAt: string | null
+  provider: ProviderData | null
+  client: ClientData | null
 }
 
 interface UserContextType {
@@ -83,9 +119,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
           },
         }
       )
-      if (!response) {
-        throw new Error('Erro ao conectar com o servidor')
-      }
 
       if (!response.ok) {
         const errorData = await response.json()
@@ -99,8 +132,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
       }
 
       const data = await response.json()
+      // Handle both response formats (direct user object or data.user)
+      const userData = data.user || data.data || data
+
       setState({
-        user: data.data,
+        user: userData,
         loading: false,
         error: null,
       })

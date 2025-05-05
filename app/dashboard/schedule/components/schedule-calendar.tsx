@@ -1,25 +1,63 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Calendar } from '@/components/ui/calendar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { CalendarIcon, Clock, User } from 'lucide-react'
+import {
+  CalendarIcon,
+  Clock,
+  User,
+  AlertCircle,
+  CheckCircle,
+  XCircle,
+  Loader2,
+} from 'lucide-react'
 import { AppointmentDetailsModal } from './appointment-details-modal'
 import { toast } from 'sonner'
 import { Skeleton } from '@/components/ui/skeleton'
+import { format, parseISO, startOfDay } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 
-type AppointmentStatus = 'confirmed' | 'pending' | 'cancelled' | 'completed'
+enum PrismaAppointmentStatus {
+  PENDING = 'PENDING',
+  CONFIRMED = 'CONFIRMED',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED',
+  REJECTED = 'REJECTED',
+}
+
+enum AppointmentType {
+  PRESENTIAL = 'PRESENTIAL',
+  VIRTUAL = 'VIRTUAL',
+}
+type AppointmentStatus = PrismaAppointmentStatus | 'loading' | 'error'
 
 type Appointment = {
-  id: string
+  id: number
+  clientId: number
+  providerId: number
+  serviceId: number
   clientName: string
-  service: string
+  providerName: string
+  serviceName: string
   date: Date
   time: string
   status: AppointmentStatus
+  duration: number
+  type: AppointmentType
+}
+
+interface ApiResponse<T> {
+  data: T[]
+  meta: {
+    total: number
+    page: number
+    limit: number
+    lastPage: number
+  }
 }
 
 export function ScheduleCalendar() {
@@ -29,160 +67,263 @@ export function ScheduleCalendar() {
     useState<Appointment | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [isUpdating, setIsUpdating] = useState<number | null>(null)
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 50,
+    total: 0,
+    lastPage: 1,
+  })
 
-  useEffect(() => {
-    const fetchAppointments = async () => {
+  const getToken = (): string | null => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('access_token')
+    }
+    return null
+  }
+
+  const fetchAppointments = useCallback(
+    async (page = 1, limit = 50) => {
       setIsLoading(true)
+      const token = getToken()
+      if (!token) {
+        toast.error('Erro de autenticação. Faça login novamente.')
+        setIsLoading(false)
+        // Redirect to login?
+        return
+      }
+
       try {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/appointments`,
+          `${process.env.NEXT_PUBLIC_API_URL}appointments/my-appointments?page=${page}&limit=${limit}&upcomingOnly=false`, // Fetch all for now
           {
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',
-              Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+              Authorization: `Bearer ${token}`,
             },
           }
         )
 
         if (!response.ok) {
-          throw new Error('Failed to fetch appointments')
+          if (response.status === 401 || response.status === 403) {
+            toast.error('Sessão expirada ou inválida. Faça login novamente.')
+            localStorage.removeItem('access_token')
+            // redirect to login
+          } else {
+            throw new Error(
+              `Failed to fetch appointments: ${response.statusText}`
+            )
+          }
+          return
         }
 
-        const data = await response.json()
-        const mappedAppointments = data.map((appointment: any) => ({
-          id: appointment.id.toString(),
-          clientName: appointment.client?.user?.name || 'Cliente não informado',
-          service: appointment.service?.name || 'Serviço não informado',
-          date: new Date(appointment.date),
-          time: new Date(appointment.date).toLocaleTimeString('pt-BR', {
-            hour: '2-digit',
-            minute: '2-digit',
-          }),
-          status: mapStatus(appointment.status),
-        }))
+        const result: ApiResponse<any> = await response.json()
+
+        const mappedAppointments = result.data.map(
+          (appointment: any): Appointment => {
+            const appointmentDate = parseISO(appointment.date)
+            return {
+              id: appointment.id,
+              clientId: appointment.clientId,
+              providerId: appointment.providerId,
+              serviceId: appointment.serviceId,
+              clientName:
+                appointment.client?.user?.name ?? 'Cliente Desconhecido',
+              providerName:
+                appointment.provider?.user?.name ?? 'Prestador Desconhecido',
+              serviceName: appointment.service?.name ?? 'Serviço Desconhecido',
+              date: appointmentDate,
+              time: format(appointmentDate, 'HH:mm', { locale: ptBR }),
+              status: appointment.status as PrismaAppointmentStatus,
+              duration: appointment.service?.duration ?? 60,
+              type: appointment.type ?? 'PRESENTIAL',
+            }
+          }
+        )
 
         setAppointments(mappedAppointments)
-      } catch (error) {
-        toast.error('Erro ao carregar agendamentos')
-        console.error('Error:', error)
+        setPagination({
+          page: result.meta.page,
+          limit: result.meta.limit,
+          total: result.meta.total,
+          lastPage: result.meta.lastPage,
+        })
+      } catch (error: any) {
+        toast.error(`Erro ao carregar agendamentos: ${error.message}`)
+        console.error('Error fetching appointments:', error)
+        setAppointments([])
       } finally {
         setIsLoading(false)
       }
-    }
+    },
+    [getToken]
+  )
 
-    fetchAppointments()
-  }, [])
-
-  const mapStatus = (status: string): AppointmentStatus => {
-    switch (status) {
-      case 'CONFIRMED':
-        return 'confirmed'
-      case 'PENDING':
-        return 'pending'
-      case 'CANCELLED':
-        return 'cancelled'
-      case 'COMPLETED':
-        return 'completed'
-      default:
-        return 'pending'
-    }
-  }
+  useEffect(() => {
+    fetchAppointments(pagination.page, pagination.limit)
+  }, [fetchAppointments, pagination.page, pagination.limit])
 
   const filteredAppointments = appointments.filter((appointment) => {
     if (!date) return true
-    return (
-      appointment.date.getDate() === date.getDate() &&
-      appointment.date.getMonth() === date.getMonth() &&
-      appointment.date.getFullYear() === date.getFullYear()
-    )
+    const appointmentDay = startOfDay(appointment.date)
+    const selectedDay = startOfDay(date)
+    return appointmentDay.getTime() === selectedDay.getTime()
   })
 
-  const handleConfirmAppointment = async (id: string) => {
+  const handleUpdateStatus = async (
+    id: number,
+    status: PrismaAppointmentStatus
+  ) => {
+    setIsUpdating(id)
+    const token = getToken()
+    if (!token) {
+      toast.error('Erro de autenticação. Faça login novamente.')
+      setIsUpdating(null)
+      return
+    }
+
     try {
-      const response = await fetch(`/api/appointments/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: 'CONFIRMED' }),
-      })
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}appointments/${id}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ status }),
+        }
+      )
 
       if (!response.ok) {
-        throw new Error('Failed to confirm appointment')
+        const errorData = await response.json()
+        throw new Error(
+          errorData.message ||
+            `Failed to update appointment status to ${status}`
+        )
       }
+
+      const updatedAppointmentData = await response.json()
 
       setAppointments((prev) =>
         prev.map((app) =>
-          app.id === id ? { ...app, status: 'confirmed' } : app
+          app.id === id
+            ? {
+                ...app,
+                status:
+                  updatedAppointmentData.status as PrismaAppointmentStatus,
+              }
+            : app
         )
       )
 
-      toast.success('Agendamento confirmado com sucesso!')
+      toast.success(
+        `Agendamento ${
+          status === PrismaAppointmentStatus.CONFIRMED
+            ? 'confirmado'
+            : 'atualizado'
+        } com sucesso!`
+      )
       setIsModalOpen(false)
-    } catch (error) {
-      toast.error('Erro ao confirmar agendamento')
-      console.error('Error:', error)
+    } catch (error: any) {
+      toast.error(`Erro ao atualizar agendamento: ${error.message}`)
+      console.error('Error updating appointment:', error)
+    } finally {
+      setIsUpdating(null)
     }
   }
 
-  const handleCancelAppointment = async (id: string) => {
+  const handleCancelAppointment = async (id: number) => {
+    setIsUpdating(id)
+    const token = getToken()
+    if (!token) {
+      toast.error('Erro de autenticação. Faça login novamente.')
+      setIsUpdating(null)
+      return
+    }
+
     try {
-      const response = await fetch(`/api/appointments/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: 'CANCELLED' }),
-      })
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}appointments/${id}`,
+        {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
 
       if (!response.ok) {
-        throw new Error('Failed to cancel appointment')
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Failed to cancel appointment')
       }
 
       setAppointments((prev) =>
         prev.map((app) =>
-          app.id === id ? { ...app, status: 'cancelled' } : app
+          app.id === id
+            ? { ...app, status: PrismaAppointmentStatus.CANCELLED }
+            : app
         )
       )
 
       toast.success('Agendamento cancelado com sucesso!')
       setIsModalOpen(false)
-    } catch (error) {
-      toast.error('Erro ao cancelar agendamento')
-      console.error('Error:', error)
+    } catch (error: any) {
+      toast.error(`Erro ao cancelar agendamento: ${error.message}`)
+      console.error('Error cancelling appointment:', error)
+    } finally {
+      setIsUpdating(null)
     }
   }
 
+  // --- Calendar Modifiers ---
   const getDatesWithAppointments = () => {
-    const dates: Record<
-      string,
-      {
-        confirmed: number
-        pending: number
-        cancelled: number
-        completed: number
-      }
-    > = {}
-
+    const dates: Record<string, Record<PrismaAppointmentStatus, number>> = {}
     appointments.forEach((appointment) => {
-      const dateStr = appointment.date.toDateString()
+      const dateStr = format(appointment.date, 'yyyy-MM-dd')
       if (!dates[dateStr]) {
         dates[dateStr] = {
-          confirmed: 0,
-          pending: 0,
-          cancelled: 0,
-          completed: 0,
+          PENDING: 0,
+          CONFIRMED: 0,
+          COMPLETED: 0,
+          CANCELLED: 0,
+          REJECTED: 0,
         }
       }
-      dates[dateStr][appointment.status]++
+      if (
+        appointment.status in PrismaAppointmentStatus &&
+        dates[dateStr][appointment.status as PrismaAppointmentStatus] !==
+          undefined
+      ) {
+        if (appointment.status in PrismaAppointmentStatus) {
+          dates[dateStr][appointment.status as PrismaAppointmentStatus]++
+        }
+      }
     })
-
     return dates
   }
 
   const datesWithAppointments = getDatesWithAppointments()
 
+  const calendarModifiers = {
+    appointmentPending: (d: Date) =>
+      datesWithAppointments[format(d, 'yyyy-MM-dd')]?.PENDING > 0,
+    appointmentConfirmed: (d: Date) =>
+      datesWithAppointments[format(d, 'yyyy-MM-dd')]?.CONFIRMED > 0,
+    appointmentCompleted: (d: Date) =>
+      datesWithAppointments[format(d, 'yyyy-MM-dd')]?.COMPLETED > 0,
+    // Add other statuses if needed
+  }
+
+  const calendarModifiersStyles = {
+    appointmentPending: { fontWeight: 'bold', color: '#F59E0B' }, // Yellow
+    appointmentConfirmed: { fontWeight: 'bold', color: '#10B981' }, // Green
+    appointmentCompleted: { fontWeight: 'bold', color: '#3B82F6' }, // Blue
+    // Add styles for other statuses
+  }
+
+  // --- Loading State ---
   if (isLoading) {
     return (
       <div className='grid gap-6 md:grid-cols-3'>
@@ -193,10 +334,10 @@ export function ScheduleCalendar() {
             </CardHeader>
             <CardContent>
               <Skeleton className='h-[300px] w-full rounded-md' />
-              <div className='mt-4 space-y-4'>
-                <Skeleton className='h-4 w-full' />
-                <Skeleton className='h-4 w-full' />
-                <Skeleton className='h-4 w-full' />
+              <div className='mt-4 space-y-2'>
+                <Skeleton className='h-4 w-3/4' />{' '}
+                <Skeleton className='h-4 w-1/2' />{' '}
+                <Skeleton className='h-4 w-2/3' />
               </div>
             </CardContent>
           </Card>
@@ -205,7 +346,7 @@ export function ScheduleCalendar() {
           <Card>
             <CardHeader>
               <CardTitle className='text-lg'>
-                Carregando agendamentos...
+                Carregando Agendamentos...
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -221,9 +362,10 @@ export function ScheduleCalendar() {
     )
   }
 
+  // --- Main Render ---
   return (
     <div className='grid gap-6 md:grid-cols-3'>
-      {/* Calendário */}
+      {/* Calendar Section */}
       <div className='md:col-span-1'>
         <Card>
           <CardHeader>
@@ -234,86 +376,41 @@ export function ScheduleCalendar() {
               mode='single'
               selected={date}
               onSelect={setDate}
-              className='rounded-md border'
-              modifiers={{
-                appointment: (date) => {
-                  const dateStr = date.toDateString()
-                  return !!datesWithAppointments[dateStr]
-                },
-              }}
-              modifiersStyles={{
-                appointment: {
-                  fontWeight: 'bold',
-                  backgroundColor: '#EBF5FF',
-                  color: '#1E40AF',
-                },
-              }}
+              className='rounded-md border p-0' // Adjust padding if needed
+              locale={ptBR}
+              modifiers={calendarModifiers}
+              modifiersStyles={calendarModifiersStyles}
+              footer={
+                <div className='mt-4 space-y-1 px-3 pb-2 text-xs'>
+                  <p className='flex items-center'>
+                    <span className='w-2 h-2 rounded-full bg-yellow-500 mr-2'></span>{' '}
+                    Pendente
+                  </p>
+                  <p className='flex items-center'>
+                    <span className='w-2 h-2 rounded-full bg-green-500 mr-2'></span>{' '}
+                    Confirmado
+                  </p>
+                  <p className='flex items-center'>
+                    <span className='w-2 h-2 rounded-full bg-blue-500 mr-2'></span>{' '}
+                    Concluído
+                  </p>
+                  {/* Add other status legends */}
+                </div>
+              }
             />
-
-            <div className='mt-4 space-y-2'>
-              <div className='flex items-center'>
-                <div className='w-3 h-3 rounded-full bg-green-500 mr-2'></div>
-                <span className='text-sm'>Confirmados</span>
-              </div>
-              <div className='flex items-center'>
-                <div className='w-3 h-3 rounded-full bg-yellow-500 mr-2'></div>
-                <span className='text-sm'>Pendentes</span>
-              </div>
-              <div className='flex items-center'>
-                <div className='w-3 h-3 rounded-full bg-red-500 mr-2'></div>
-                <span className='text-sm'>Cancelados</span>
-              </div>
-              <div className='flex items-center'>
-                <div className='w-3 h-3 rounded-full bg-blue-500 mr-2'></div>
-                <span className='text-sm'>Concluídos</span>
-              </div>
-            </div>
-
-            <div className='mt-6'>
-              <h3 className='text-sm font-medium mb-2'>Resumo do Mês</h3>
-              <div className='grid grid-cols-2 gap-2'>
-                <div className='bg-gray-50 p-3 rounded-md text-center'>
-                  <span className='block text-2xl font-bold text-green-600'>
-                    {
-                      appointments.filter((a) => a.status === 'confirmed')
-                        .length
-                    }
-                  </span>
-                  <span className='text-xs text-gray-500'>Confirmados</span>
-                </div>
-                <div className='bg-gray-50 p-3 rounded-md text-center'>
-                  <span className='block text-2xl font-bold text-yellow-600'>
-                    {appointments.filter((a) => a.status === 'pending').length}
-                  </span>
-                  <span className='text-xs text-gray-500'>Pendentes</span>
-                </div>
-                <div className='bg-gray-50 p-3 rounded-md text-center'>
-                  <span className='block text-2xl font-bold text-red-600'>
-                    {
-                      appointments.filter((a) => a.status === 'cancelled')
-                        .length
-                    }
-                  </span>
-                  <span className='text-xs text-gray-500'>Cancelados</span>
-                </div>
-                <div className='bg-gray-50 p-3 rounded-md text-center'>
-                  <span className='block text-2xl font-bold text-blue-600'>
-                    {appointments.length}
-                  </span>
-                  <span className='text-xs text-gray-500'>Total</span>
-                </div>
-              </div>
-            </div>
+            {/* Monthly Summary (Optional) */}
+            {/* ... summary code ... */}
           </CardContent>
         </Card>
       </div>
 
-      {/* Lista de Agendamentos */}
+      {/* Appointments List Section */}
       <div className='md:col-span-2'>
         <Card>
           <CardHeader>
             <CardTitle className='text-lg'>
-              Agendamentos {date && `- ${date.toLocaleDateString('pt-BR')}`}
+              Agendamentos{' '}
+              {date ? `- ${format(date, 'PPP', { locale: ptBR })}` : ''}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -325,160 +422,145 @@ export function ScheduleCalendar() {
                 <TabsTrigger value='completed'>Concluídos</TabsTrigger>
               </TabsList>
 
-              <TabsContent value='all' className='space-y-4'>
-                {filteredAppointments.length > 0 ? (
-                  filteredAppointments.map((appointment) => (
-                    <AppointmentCard
-                      key={appointment.id}
-                      appointment={appointment}
-                      onViewDetails={() => {
-                        setSelectedAppointment(appointment)
-                        setIsModalOpen(true)
-                      }}
-                    />
-                  ))
-                ) : (
-                  <EmptyState message='Nenhum agendamento para esta data' />
-                )}
-              </TabsContent>
+              {(['all', 'CONFIRMED', 'PENDING', 'COMPLETED'] as const).map(
+                (statusKey) => {
+                  const statusFilter =
+                    statusKey === 'all'
+                      ? undefined
+                      : (statusKey as PrismaAppointmentStatus)
+                  const list = statusFilter
+                    ? filteredAppointments.filter(
+                        (a) => a.status === statusFilter
+                      )
+                    : filteredAppointments
+                  const statusText = statusFilter
+                    ? getStatusText(statusFilter).toLowerCase()
+                    : 'para esta data'
 
-              <TabsContent value='confirmed' className='space-y-4'>
-                {filteredAppointments.filter((a) => a.status === 'confirmed')
-                  .length > 0 ? (
-                  filteredAppointments
-                    .filter((a) => a.status === 'confirmed')
-                    .map((appointment) => (
-                      <AppointmentCard
-                        key={appointment.id}
-                        appointment={appointment}
-                        onViewDetails={() => {
-                          setSelectedAppointment(appointment)
-                          setIsModalOpen(true)
-                        }}
-                      />
-                    ))
-                ) : (
-                  <EmptyState message='Nenhum agendamento confirmado para esta data' />
-                )}
-              </TabsContent>
-
-              <TabsContent value='pending' className='space-y-4'>
-                {filteredAppointments.filter((a) => a.status === 'pending')
-                  .length > 0 ? (
-                  filteredAppointments
-                    .filter((a) => a.status === 'pending')
-                    .map((appointment) => (
-                      <AppointmentCard
-                        key={appointment.id}
-                        appointment={appointment}
-                        onViewDetails={() => {
-                          setSelectedAppointment(appointment)
-                          setIsModalOpen(true)
-                        }}
-                      />
-                    ))
-                ) : (
-                  <EmptyState message='Nenhum agendamento pendente para esta data' />
-                )}
-              </TabsContent>
-
-              <TabsContent value='completed' className='space-y-4'>
-                {filteredAppointments.filter((a) => a.status === 'completed')
-                  .length > 0 ? (
-                  filteredAppointments
-                    .filter((a) => a.status === 'completed')
-                    .map((appointment) => (
-                      <AppointmentCard
-                        key={appointment.id}
-                        appointment={appointment}
-                        onViewDetails={() => {
-                          setSelectedAppointment(appointment)
-                          setIsModalOpen(true)
-                        }}
-                      />
-                    ))
-                ) : (
-                  <EmptyState message='Nenhum agendamento concluído para esta data' />
-                )}
-              </TabsContent>
+                  return (
+                    <TabsContent
+                      key={statusKey}
+                      value={statusKey}
+                      className='space-y-4'
+                    >
+                      {list.length > 0 ? (
+                        list.map((appointment) => (
+                          <AppointmentCard
+                            key={appointment.id}
+                            appointment={appointment}
+                            isLoading={isUpdating === appointment.id}
+                            onViewDetails={() => {
+                              setSelectedAppointment(appointment)
+                              setIsModalOpen(true)
+                            }}
+                          />
+                        ))
+                      ) : (
+                        <EmptyState
+                          message={`Nenhum agendamento ${statusText}`}
+                        />
+                      )}
+                    </TabsContent>
+                  )
+                }
+              )}
             </Tabs>
+            {/* Add Pagination Controls if lastPage > 1 */}
+            {/* ... pagination UI ... */}
           </CardContent>
         </Card>
       </div>
 
+      {/* Details Modal */}
       <AppointmentDetailsModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         appointment={selectedAppointment}
-        onConfirm={handleConfirmAppointment}
+        isLoading={!!isUpdating} // Pass general loading state to modal
+        onConfirm={(id) =>
+          handleUpdateStatus(id, PrismaAppointmentStatus.CONFIRMED)
+        }
         onCancel={handleCancelAppointment}
+        onComplete={(id) =>
+          handleUpdateStatus(id, PrismaAppointmentStatus.COMPLETED)
+        } // Add complete action
+        onReject={(id) =>
+          handleUpdateStatus(id, PrismaAppointmentStatus.REJECTED)
+        } // Add reject action
       />
     </div>
   )
 }
 
+// --- Helper Components ---
+
 const AppointmentCard = ({
   appointment,
   onViewDetails,
+  isLoading,
 }: {
   appointment: Appointment
   onViewDetails: () => void
+  isLoading: boolean
 }) => {
-  const getStatusColor = (status: AppointmentStatus) => {
-    switch (status) {
-      case 'confirmed':
-        return 'bg-green-100 text-green-800 border-green-200'
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200'
-      case 'cancelled':
-        return 'bg-red-100 text-red-800 border-red-200'
-      case 'completed':
-        return 'bg-blue-100 text-blue-800 border-blue-200'
-      default:
-        return ''
-    }
-  }
-
-  const getStatusText = (status: AppointmentStatus) => {
-    switch (status) {
-      case 'confirmed':
-        return 'Confirmado'
-      case 'pending':
-        return 'Pendente'
-      case 'cancelled':
-        return 'Cancelado'
-      case 'completed':
-        return 'Concluído'
-      default:
-        return ''
-    }
-  }
+  const { statusColor, statusText, StatusIcon } = getStatusInfo(
+    appointment.status
+  )
 
   return (
-    <div className='flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors'>
-      <div className='flex items-start space-x-4'>
+    <div
+      className={`relative flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${
+        isLoading ? 'opacity-50' : ''
+      }`}
+    >
+      <div className='flex items-start space-x-4 flex-grow'>
         <div className='flex-shrink-0'>
-          <div className='w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center'>
-            <User className='h-5 w-5 text-gray-600' />
+          <div className='w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center'>
+            <User className='h-5 w-5 text-gray-600 dark:text-gray-300' />
           </div>
         </div>
-        <div>
-          <h4 className='font-medium'>{appointment.clientName}</h4>
-          <p className='text-sm text-gray-600'>{appointment.service}</p>
-          <div className='flex items-center mt-1 text-sm text-gray-500'>
-            <CalendarIcon className='h-3 w-3 mr-1' />
-            <span>{appointment.date.toLocaleDateString('pt-BR')}</span>
-            <Clock className='h-3 w-3 ml-3 mr-1' />
-            <span>{appointment.time}</span>
+        <div className='flex-grow'>
+          <h4 className='font-medium text-gray-900 dark:text-gray-100'>
+            {appointment.clientName}
+          </h4>
+          <p className='text-sm text-gray-600 dark:text-gray-400'>
+            {appointment.serviceName}
+          </p>
+          <div className='flex items-center mt-1 text-sm text-gray-500 dark:text-gray-400 flex-wrap'>
+            <span className='flex items-center mr-3'>
+              <CalendarIcon className='h-3 w-3 mr-1' />{' '}
+              {format(appointment.date, 'dd/MM/yy')}
+            </span>
+            <span className='flex items-center'>
+              <Clock className='h-3 w-3 mr-1' /> {appointment.time} (
+              {appointment.duration} min)
+            </span>
           </div>
         </div>
       </div>
-      <div className='flex items-center space-x-2'>
-        <Badge variant='outline' className={getStatusColor(appointment.status)}>
-          {getStatusText(appointment.status)}
+      <div className='flex flex-col items-end ml-4 space-y-2'>
+        <Badge
+          variant='outline'
+          className={`border ${statusColor} ${statusColor
+            .replace('bg-', 'text-')
+            .replace('-100', '-800')} dark:${statusColor
+            .replace('bg-', 'text-')
+            .replace('-100', '-300')} dark:border-opacity-50`}
+        >
+          <StatusIcon className='h-3 w-3 mr-1' />
+          {statusText}
         </Badge>
-        <Button variant='ghost' size='sm' onClick={onViewDetails}>
-          Detalhes
+        <Button
+          variant='ghost'
+          size='sm'
+          onClick={onViewDetails}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <Loader2 className='h-4 w-4 animate-spin' />
+          ) : (
+            'Detalhes'
+          )}
         </Button>
       </div>
     </div>
@@ -486,7 +568,68 @@ const AppointmentCard = ({
 }
 
 const EmptyState = ({ message }: { message: string }) => (
-  <div className='text-center py-8'>
-    <p className='text-gray-500'>{message}</p>
+  <div className='text-center py-10 px-4 border-2 border-dashed rounded-lg'>
+    <CalendarIcon className='mx-auto h-10 w-10 text-gray-400' />
+    <p className='mt-2 text-sm text-gray-500'>{message}</p>
   </div>
 )
+
+// --- Status Mapping ---
+
+const getStatusInfo = (
+  status: AppointmentStatus
+): {
+  statusColor: string
+  statusText: string
+  StatusIcon: React.ElementType
+} => {
+  switch (status) {
+    case PrismaAppointmentStatus.CONFIRMED:
+      return {
+        statusColor: 'bg-green-100 border-green-200',
+        statusText: 'Confirmado',
+        StatusIcon: CheckCircle,
+      }
+    case PrismaAppointmentStatus.PENDING:
+      return {
+        statusColor: 'bg-yellow-100 border-yellow-200',
+        statusText: 'Pendente',
+        StatusIcon: Clock,
+      }
+    case PrismaAppointmentStatus.CANCELLED:
+      return {
+        statusColor: 'bg-red-100 border-red-200',
+        statusText: 'Cancelado',
+        StatusIcon: XCircle,
+      }
+    case PrismaAppointmentStatus.COMPLETED:
+      return {
+        statusColor: 'bg-blue-100 border-blue-200',
+        statusText: 'Concluído',
+        StatusIcon: CheckCircle,
+      } // Or a different icon?
+    case PrismaAppointmentStatus.REJECTED:
+      return {
+        statusColor: 'bg-red-100 border-red-200',
+        statusText: 'Rejeitado',
+        StatusIcon: XCircle,
+      }
+    case 'loading':
+      return {
+        statusColor: 'bg-gray-100 border-gray-200',
+        statusText: 'Atualizando...',
+        StatusIcon: Loader2,
+      }
+    default:
+      return {
+        statusColor: 'bg-gray-100 border-gray-200',
+        statusText: 'Desconhecido',
+        StatusIcon: AlertCircle,
+      }
+  }
+}
+
+const getStatusText = (status: PrismaAppointmentStatus): string => {
+  return getStatusInfo(status).statusText
+}
+

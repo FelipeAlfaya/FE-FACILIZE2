@@ -58,7 +58,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isInitialized, setIsInitialized] = useState(false)
 
   useEffect(() => {
-    // Só executa no cliente
     if (typeof window !== 'undefined') {
       const token =
         localStorage.getItem('access_token') ||
@@ -115,3 +114,4 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 }
 
 export const useAuth = () => useContext(AuthContext)
+
