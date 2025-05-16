@@ -31,7 +31,6 @@ export function CheckoutForm({
   }
 
   const getFormattedPrice = () => {
-    // Verificação profunda do objeto plan
     if (!plan || typeof plan !== 'object' || typeof plan.price !== 'number') {
       console.error('Plano inválido:', plan)
       return '0.00'
@@ -57,7 +56,6 @@ export function CheckoutForm({
     }
 
     try {
-      // 1. Criar payment method no Stripe
       const { error: stripeError, paymentMethod } =
         await stripe.createPaymentMethod({
           type: 'card',
@@ -68,7 +66,6 @@ export function CheckoutForm({
       if (!paymentMethod?.id)
         throw new Error('Falha ao criar método de pagamento')
 
-      // 2. Enviar apenas o ID do payment method para o onSubmit
       await onSubmit('credit_card', paymentMethod.id)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro desconhecido')
@@ -127,3 +124,4 @@ export function CheckoutForm({
     </div>
   )
 }
+

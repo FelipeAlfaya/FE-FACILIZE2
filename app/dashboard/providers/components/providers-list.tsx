@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Search, MapPin, Star, Calendar } from 'lucide-react'
+import { Search, MapPin, Star, Calendar, Mail } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -22,27 +22,17 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination'
-
-type Provider = {
-  id: string
-  name: string
-  specialty: string
-  location: string
-  rating: number
-  services: number
-  price: number
-  description?: string
-  avatar?: string | null
-}
+import { ProviderData, Service, TransformedProvider } from '@/types/appointment'
 
 export function ProvidersList() {
   const [searchTerm, setSearchTerm] = useState('')
-  const [sortBy, setSortBy] = useState('rating')
-  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(
-    null
-  )
+  const [sortBy, setSortBy] = useState<
+    'rating' | 'price_asc' | 'price_desc' | 'services'
+  >('rating')
+  const [selectedProvider, setSelectedProvider] =
+    useState<TransformedProvider | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [providers, setProviders] = useState<Provider[]>([])
+  const [providers, setProviders] = useState<TransformedProvider[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
@@ -75,20 +65,32 @@ export function ProvidersList() {
 
         const data = await response.json()
 
-        const transformedProviders = data.data.map((provider: any) => ({
-          id: provider.id.toString(),
-          name: provider.name,
-          specialty:
-            provider.provider?.specialty || 'Especialidade não informada',
-          location: provider.address
-            ? `${provider.address.city}, ${provider.address.state}`
-            : 'Localização não informada',
-          rating: 4.5,
-          services: provider.provider?.services?.length || 0,
-          price: provider.provider?.services?.[0]?.price || 0,
-          description: provider.provider?.description,
-          avatar: provider.avatar,
-        }))
+        const transformedProviders: TransformedProvider[] = data.data.map(
+          (provider: any) => ({
+            id: provider.id.toString(),
+            name: provider.name,
+            email: provider.email,
+            avatar: provider.avatar,
+            specialty: provider.provider?.specialty || null,
+            location: provider.address
+              ? `${provider.address.city || ''}, ${
+                  provider.address.state || ''
+                }`.trim()
+              : 'Localização não informada',
+            rating: provider.provider?.provider_rating || null,
+            servicesCount: provider.provider?.services?.length || 0,
+            price: provider.provider?.services?.[0]?.price || 0,
+            description: provider.provider?.description || null,
+            providerType: provider.provider?.providerType || null,
+            services:
+              provider.provider?.services?.map((service: any) => ({
+                id: service.id.toString(),
+                name: service.name,
+                price: service.price,
+                duration: service.duration,
+              })) || [],
+          })
+        )
 
         setProviders(transformedProviders)
         setTotalPages(data.meta.last_page)
@@ -106,28 +108,36 @@ export function ProvidersList() {
     fetchProviders()
   }, [currentPage])
 
-  const filteredProviders = providers.filter(
-    (provider) =>
-      provider.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      provider.specialty.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (provider.location &&
-        provider.location.toLowerCase().includes(searchTerm.toLowerCase()))
-  )
-
-  const sortedProviders = [...filteredProviders].sort((a, b) => {
-    if (sortBy === 'rating') {
-      return b.rating - a.rating
-    } else if (sortBy === 'price_asc') {
-      return a.price - b.price
-    } else if (sortBy === 'price_desc') {
-      return b.price - a.price
-    } else if (sortBy === 'services') {
-      return b.services - a.services
-    }
-    return 0
+  const filteredProviders = providers.filter((provider) => {
+    const searchLower = searchTerm.toLowerCase()
+    return (
+      provider.name.toLowerCase().includes(searchLower) ||
+      (provider.specialty &&
+        provider.specialty.toLowerCase().includes(searchLower)) ||
+      provider.location.toLowerCase().includes(searchLower) ||
+      provider.email.toLowerCase().includes(searchLower) ||
+      provider.services.some((service: Service) =>
+        service.name.toLowerCase().includes(searchLower)
+      )
+    )
   })
 
-  const handleSchedule = (provider: Provider) => {
+  const sortedProviders = [...filteredProviders].sort((a, b) => {
+    switch (sortBy) {
+      case 'rating':
+        return (b.rating || 0) - (a.rating || 0)
+      case 'price_asc':
+        return a.price - b.price
+      case 'price_desc':
+        return b.price - a.price
+      case 'services':
+        return b.servicesCount - a.servicesCount
+      default:
+        return 0
+    }
+  })
+
+  const handleSchedule = (provider: TransformedProvider) => {
     setSelectedProvider(provider)
     setIsModalOpen(true)
   }
@@ -160,14 +170,17 @@ export function ProvidersList() {
         <div className='relative flex-grow'>
           <Search className='absolute left-3 top-3 h-5 w-5 text-gray-400' />
           <Input
-            placeholder='Buscar por nome, especialidade ou localização...'
+            placeholder='Buscar por nome, especialidade, email, localização ou serviço...'
             className='pl-10'
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
         <div className='w-full md:w-48'>
-          <Select value={sortBy} onValueChange={setSortBy}>
+          <Select
+            value={sortBy}
+            onValueChange={(value) => setSortBy(value as typeof sortBy)}
+          >
             <SelectTrigger>
               <SelectValue placeholder='Ordenar por' />
             </SelectTrigger>
@@ -185,48 +198,74 @@ export function ProvidersList() {
         {sortedProviders.map((provider) => (
           <Card
             key={provider.id}
-            className='overflow-hidden bg-card text-card-foreground'
+            className='overflow-hidden bg-card text-card-foreground flex flex-col h-full'
           >
-            <CardContent className='p-0'>
-              <div className='p-6'>
-                <div className='flex justify-between items-start mb-4'>
-                  <div>
-                    <h3 className='font-bold'>{provider.name}</h3>
-                    <p className='text-sm text-gray-600'>
-                      {provider.specialty}
-                    </p>
+            <CardContent className='p-0 flex flex-col flex-grow'>
+              <div className='p-6 flex flex-col flex-grow'>
+                {/* Updated this section to fix price alignment */}
+                <div className='flex justify-between items-start mb-4 gap-2'>
+                  <div className='min-w-0 flex-1'>
+                    {' '}
+                    {/* Added min-w-0 and flex-1 */}
+                    <h3 className='font-bold truncate'>{provider.name}</h3>
+                    <div className='flex items-center text-sm text-gray-600 mt-1'>
+                      <Mail className='h-4 w-4 mr-1 flex-shrink-0' />
+                      <span className='truncate'>{provider.email}</span>
+                    </div>
+                    {provider.specialty && (
+                      <p className='text-sm text-gray-600 mt-1 truncate'>
+                        {provider.specialty}
+                      </p>
+                    )}
+                    {/* {provider.services.length > 0 && (
+                      <p className='text-xs text-gray-500 mt-1 truncate'>
+                        Serviços:{' '}
+                        {provider.services.map((s) => s.name).join(', ')}
+                      </p>
+                    )} */}
                   </div>
                   <Badge
                     variant='outline'
-                    className='bg-blue-50 text-blue-600 border-blue-200'
+                    className='bg-blue-50 text-blue-600 border-blue-200 flex-shrink-0 mt-1'
                   >
                     R${provider.price.toFixed(2)}
                   </Badge>
                 </div>
 
                 <div className='flex items-center text-sm text-gray-600 mb-4'>
-                  <MapPin className='h-4 w-4 mr-1' />
-                  <span>{provider.location}</span>
+                  <MapPin className='h-4 w-4 mr-1 flex-shrink-0' />
+                  <span className='truncate'>{provider.location}</span>
                 </div>
 
-                <div className='flex justify-between items-center'>
+                <div className='flex justify-between items-center mt-auto'>
                   <div className='flex items-center'>
-                    <div className='flex'>
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`h-4 w-4 ${
-                            i < Math.floor(provider.rating)
-                              ? 'text-yellow-400 fill-yellow-400'
-                              : 'text-gray-300'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <span className='text-sm ml-2'>{provider.rating}</span>
+                    {provider.rating !== null ? (
+                      <>
+                        <div className='flex'>
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`h-4 w-4 ${
+                                i < Math.floor(provider.rating || 0)
+                                  ? 'text-yellow-400 fill-yellow-400'
+                                  : 'text-gray-300'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span className='text-sm ml-2'>
+                          {provider.rating?.toFixed(1)}
+                        </span>
+                      </>
+                    ) : (
+                      <span className='text-sm text-gray-500'>
+                        Sem avaliação
+                      </span>
+                    )}
                   </div>
                   <span className='text-xs text-gray-500'>
-                    {provider.services} serviços prestados
+                    {provider.servicesCount}{' '}
+                    {provider.servicesCount === 1 ? 'serviço' : 'serviços'}
                   </span>
                 </div>
               </div>
@@ -299,3 +338,4 @@ export function ProvidersList() {
     </div>
   )
 }
+

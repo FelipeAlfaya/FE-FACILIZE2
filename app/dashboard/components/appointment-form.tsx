@@ -104,7 +104,7 @@ export function AppointmentForm({ providerId }: AppointmentFormProps) {
     setIsLoading(true)
 
     try {
-      // await fetch(`${process.env.NEXT_PUBLIC_API_URL}/appointments`, {
+      // await fetch(`${process.env.NEXT_PUBLIC_API_URL}appointments`, {
       //   method: 'POST',
       //   headers: { 'Content-Type': 'application/json' },
       //   body: JSON.stringify({
@@ -259,3 +259,4 @@ export function AppointmentForm({ providerId }: AppointmentFormProps) {
     </Card>
   )
 }
+

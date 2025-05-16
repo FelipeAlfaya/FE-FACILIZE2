@@ -60,9 +60,9 @@ export function PricingPlans() {
 
       <div className='grid gap-6 md:grid-cols-3'>
         {plans.map((plan, index) => {
-          const isPopular = index === 1 // Make the middle plan popular
+          const isPopular = index === 1
           const price =
-            billingCycle === 'monthly' ? plan.price : plan.price * 12 * 0.9 // 10% discount for annual
+            billingCycle === 'monthly' ? plan.price : plan.price * 12 * 0.9
 
           return (
             <Card
@@ -158,3 +158,4 @@ export function PricingPlans() {
     </div>
   )
 }
+

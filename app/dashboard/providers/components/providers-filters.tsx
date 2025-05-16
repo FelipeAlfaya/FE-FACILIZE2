@@ -11,6 +11,37 @@ import { Filter, X } from 'lucide-react'
 export function ProviderFilters() {
   const [priceRange, setPriceRange] = useState([0, 100])
   const [showFilters, setShowFilters] = useState(false)
+  const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([])
+  const [selectedRatings, setSelectedRatings] = useState<number[]>([])
+
+  const specialties = [
+    'Contabilidade Fiscal',
+    'Contabilidade Tributária',
+    'Contabilidade Empresarial',
+    'Contabilidade Pessoal',
+  ]
+
+  const handleSpecialtyChange = (specialty: string) => {
+    setSelectedSpecialties((prev) =>
+      prev.includes(specialty)
+        ? prev.filter((s) => s !== specialty)
+        : [...prev, specialty]
+    )
+  }
+
+  const handleRatingChange = (rating: number) => {
+    setSelectedRatings((prev) =>
+      prev.includes(rating)
+        ? prev.filter((r) => r !== rating)
+        : [...prev, rating]
+    )
+  }
+
+  const clearFilters = () => {
+    setPriceRange([0, 100])
+    setSelectedSpecialties([])
+    setSelectedRatings([])
+  }
 
   return (
     <>
@@ -34,22 +65,18 @@ export function ProviderFilters() {
           <div className='space-y-4'>
             <h3 className='font-medium text-sm'>Especialidades</h3>
             <div className='space-y-2'>
-              <div className='flex items-center space-x-2'>
-                <Checkbox id='fiscal' />
-                <Label htmlFor='fiscal'>Contabilidade Fiscal</Label>
-              </div>
-              <div className='flex items-center space-x-2'>
-                <Checkbox id='tributaria' />
-                <Label htmlFor='tributaria'>Contabilidade Tributária</Label>
-              </div>
-              <div className='flex items-center space-x-2'>
-                <Checkbox id='empresarial' />
-                <Label htmlFor='empresarial'>Contabilidade Empresarial</Label>
-              </div>
-              <div className='flex items-center space-x-2'>
-                <Checkbox id='pessoal' />
-                <Label htmlFor='pessoal'>Contabilidade Pessoal</Label>
-              </div>
+              {specialties.map((specialty) => (
+                <div key={specialty} className='flex items-center space-x-2'>
+                  <Checkbox
+                    id={specialty.replace(/\s+/g, '-').toLowerCase()}
+                    checked={selectedSpecialties.includes(specialty)}
+                    onCheckedChange={() => handleSpecialtyChange(specialty)}
+                  />
+                  <Label htmlFor={specialty.replace(/\s+/g, '-').toLowerCase()}>
+                    {specialty}
+                  </Label>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -72,45 +99,23 @@ export function ProviderFilters() {
           <div className='space-y-4'>
             <h3 className='font-medium text-sm'>Avaliação</h3>
             <div className='space-y-2'>
-              <div className='flex items-center space-x-2'>
-                <Checkbox id='rating5' />
-                <Label htmlFor='rating5'>5 estrelas</Label>
-              </div>
-              <div className='flex items-center space-x-2'>
-                <Checkbox id='rating4' />
-                <Label htmlFor='rating4'>4+ estrelas</Label>
-              </div>
-              <div className='flex items-center space-x-2'>
-                <Checkbox id='rating3' />
-                <Label htmlFor='rating3'>3+ estrelas</Label>
-              </div>
-            </div>
-          </div>
-
-          <div className='space-y-4'>
-            <h3 className='font-medium text-sm'>Localização</h3>
-            <div className='space-y-2'>
-              <div className='flex items-center space-x-2'>
-                <Checkbox id='sp' />
-                <Label htmlFor='sp'>São Paulo</Label>
-              </div>
-              <div className='flex items-center space-x-2'>
-                <Checkbox id='rj' />
-                <Label htmlFor='rj'>Rio de Janeiro</Label>
-              </div>
-              <div className='flex items-center space-x-2'>
-                <Checkbox id='mg' />
-                <Label htmlFor='mg'>Minas Gerais</Label>
-              </div>
-              <div className='flex items-center space-x-2'>
-                <Checkbox id='rs' />
-                <Label htmlFor='rs'>Rio Grande do Sul</Label>
-              </div>
+              {[5, 4, 3].map((rating) => (
+                <div key={rating} className='flex items-center space-x-2'>
+                  <Checkbox
+                    id={`rating${rating}`}
+                    checked={selectedRatings.includes(rating)}
+                    onCheckedChange={() => handleRatingChange(rating)}
+                  />
+                  <Label htmlFor={`rating${rating}`}>
+                    {rating === 5 ? '5 estrelas' : `${rating}+ estrelas`}
+                  </Label>
+                </div>
+              ))}
             </div>
           </div>
 
           <div className='pt-4 flex space-x-2'>
-            <Button variant='outline' className='w-full'>
+            <Button variant='outline' className='w-full' onClick={clearFilters}>
               Limpar
             </Button>
             <Button className='w-full'>Aplicar</Button>
@@ -120,3 +125,4 @@ export function ProviderFilters() {
     </>
   )
 }
+

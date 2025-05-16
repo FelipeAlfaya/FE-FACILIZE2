@@ -349,7 +349,7 @@ export function NotificationsScreen() {
   const handleMarkAllAsRead = async () => {
     if (!user?.id) return
     try {
-      await markAllAsRead(user.id) // Passe o user.id
+      await markAllAsRead(user.id)
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
     } catch (error) {
       console.error('Failed to mark all as read:', error)
@@ -407,7 +407,6 @@ export function NotificationsScreen() {
     setSelectedNotification(notification)
     setDetailsDialogOpen(true)
 
-    // Mark as read when viewed
     if (!notification.read) {
       handleMarkAsRead(notification.id)
     }
@@ -766,3 +765,4 @@ export function NotificationsScreen() {
     ))
   }
 }
+

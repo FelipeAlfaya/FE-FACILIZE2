@@ -8,11 +8,11 @@ import {
   User,
   CheckCircle,
   XCircle,
-  Check,
-  Loader2,
-  AlertCircle,
-  Building,
-  Briefcase,
+  MapPin,
+  Video,
+  Phone,
+  Mail,
+  PhoneCall,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -21,306 +21,360 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogDescription,
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
-import { AppointmentStatus as PrismaAppointmentStatus } from '@prisma/client'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-
-type Appointment = {
-  id: number
-  clientId: number
-  providerId: number
-  serviceId: number
-  clientName: string
-  providerName: string
-  serviceName: string
-  date: Date
-  time: string
-  status: PrismaAppointmentStatus
-  duration: number
-  type: 'VIRTUAL' | 'PRESENTIAL'
-}
+import {
+  Appointment,
+  AppointmentStatus,
+  AppointmentType,
+} from '@/types/appointment'
 
 type AppointmentDetailsModalProps = {
   isOpen: boolean
   onClose: () => void
   appointment: Appointment | null
-  isLoading: boolean
-  onConfirm: (id: number) => Promise<void>
-  onCancel: (id: number) => Promise<void>
-  onComplete: (id: number) => Promise<void>
-  onReject: (id: number) => Promise<void>
-}
-
-const getStatusInfo = (
-  status: PrismaAppointmentStatus
-): {
-  statusColor: string
-  statusText: string
-  StatusIcon: React.ElementType
-} => {
-  switch (status) {
-    case PrismaAppointmentStatus.CONFIRMED:
-      return {
-        statusColor: 'bg-green-100 border-green-200',
-        statusText: 'Confirmado',
-        StatusIcon: CheckCircle,
-      }
-    case PrismaAppointmentStatus.PENDING:
-      return {
-        statusColor: 'bg-yellow-100 border-yellow-200',
-        statusText: 'Pendente',
-        StatusIcon: Clock,
-      }
-    case PrismaAppointmentStatus.CANCELLED:
-      return {
-        statusColor: 'bg-red-100 border-red-200',
-        statusText: 'Cancelado',
-        StatusIcon: XCircle,
-      }
-    case PrismaAppointmentStatus.COMPLETED:
-      return {
-        statusColor: 'bg-blue-100 border-blue-200',
-        statusText: 'Concluído',
-        StatusIcon: CheckCircle,
-      }
-    case PrismaAppointmentStatus.REJECTED:
-      return {
-        statusColor: 'bg-red-100 border-red-200',
-        statusText: 'Rejeitado',
-        StatusIcon: XCircle,
-      }
-    default:
-      return {
-        statusColor: 'bg-gray-100 border-gray-200',
-        statusText: 'Desconhecido',
-        StatusIcon: AlertCircle,
-      }
-  }
 }
 
 export function AppointmentDetailsModal({
   isOpen,
   onClose,
   appointment,
-  isLoading,
-  onConfirm,
-  onCancel,
-  onComplete,
-  onReject,
 }: AppointmentDetailsModalProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSuccess, setIsSuccess] = useState(false)
+  const [userInfo, setUserInfo] = useState<any>(null)
+
   if (!appointment) return null
 
-  const { statusColor, statusText, StatusIcon } = getStatusInfo(
-    appointment.status
-  )
+  const getStatusColor = (status: AppointmentStatus) => {
+    switch (status) {
+      case 'CONFIRMED':
+        return 'bg-emerald-100 text-emerald-800 border-emerald-200'
+      case 'PENDING':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+      case 'CANCELLED':
+        return 'bg-red-100 text-red-800 border-red-200'
+      case 'COMPLETED':
+        return 'bg-blue-100 text-blue-800 border-blue-200'
+      default:
+        return ''
+    }
+  }
 
-  const isProvider = true
-  const isClient = false
+  const getClientInfo = () => {
+    if (!appointment) return { name: '', email: null, phone: null }
 
-  const handleAction = async (action: (id: number) => Promise<void>) => {
-    await action(appointment.id)
+    if (appointment.isProviderToProvider) {
+      return {
+        name: appointment.User?.name || 'Outro Provedor',
+        email: appointment.User?.email || null,
+        phone: appointment.User?.phone || null,
+      }
+    }
+
+    return {
+      name: appointment.client?.user?.name || 'Cliente não encontrado',
+      email: appointment.client?.user?.email || null,
+      phone: appointment.client?.user?.phone || null,
+    }
+  }
+
+  const getStatusText = (status: AppointmentStatus) => {
+    switch (status) {
+      case 'CONFIRMED':
+        return 'Confirmado'
+      case 'PENDING':
+        return 'Pendente'
+      case 'CANCELLED':
+        return 'Cancelado'
+      case 'COMPLETED':
+        return 'Concluído'
+      default:
+        return ''
+    }
+  }
+
+  const getStatusIcon = (status: AppointmentStatus) => {
+    switch (status) {
+      case 'CONFIRMED':
+        return <CheckCircle className='h-5 w-5 text-emerald-600' />
+      case 'PENDING':
+        return <Clock className='h-5 w-5 text-yellow-600' />
+      case 'CANCELLED':
+        return <XCircle className='h-5 w-5 text-red-600' />
+      case 'COMPLETED':
+        return <CheckCircle className='h-5 w-5 text-blue-600' />
+      default:
+        return null
+    }
+  }
+
+  const getAppointmentTypeIcon = (type: AppointmentType) => {
+    switch (type) {
+      case 'PRESENTIAL':
+        return <MapPin className='h-5 w-5 text-blue-600' />
+      case 'VIRTUAL':
+        return <Video className='h-5 w-5 text-blue-600' />
+      case 'NOT_SPECIFIED':
+        return <Phone className='h-5 w-5 text-blue-600' />
+      default:
+        return <CalendarIcon className='h-5 w-5 text-blue-600' />
+    }
+  }
+
+  const getAppointmentTypeText = (type: AppointmentType) => {
+    switch (type) {
+      case 'PRESENTIAL':
+        return 'Presencial'
+      case 'VIRTUAL':
+        return 'Videoconferência'
+      case 'NOT_SPECIFIED':
+        return 'Telefone'
+      default:
+        return 'Não especificado'
+    }
+  }
+
+  const handleConfirm = () => {
+    if (appointment.status !== 'PENDING') return
+
+    setIsSubmitting(true)
+
+    // Simulate API call
+    setTimeout(() => {
+      setIsSubmitting(false)
+      setIsSuccess(true)
+
+      // Reset and close after showing success
+      setTimeout(() => {
+        setIsSuccess(false)
+        onClose()
+      }, 2000)
+    }, 1500)
+  }
+
+  const getSuccessMessage = () => {
+    const clientInfo = getClientInfo()
+    return `O agendamento com ${clientInfo.name} foi confirmado com sucesso.`
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className='sm:max-w-lg'>
-        {' '}
-        {/* Increased width slightly */}
+      <DialogContent className='sm:max-w-md'>
         <DialogHeader>
           <DialogTitle>Detalhes do Agendamento</DialogTitle>
-          <DialogDescription>
-            Revise as informações do agendamento e tome as ações necessárias.
-          </DialogDescription>
-          <Button
-            variant='ghost'
-            size='icon'
-            className='absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground'
-            onClick={onClose}
-            aria-label='Fechar'
-          >
-            <X className='h-4 w-4' />
-          </Button>
         </DialogHeader>
-        <div className='py-4 grid gap-4'>
-          {/* Status Badge */}
-          <div className='flex justify-end'>
-            <Badge
-              variant='outline'
-              className={`border ${statusColor} ${statusColor
-                .replace('bg-', 'text-')
-                .replace('-100', '-800')} dark:${statusColor
-                .replace('bg-', 'text-')
-                .replace('-100', '-300')} dark:border-opacity-50`}
-            >
-              <StatusIcon className='h-3 w-3 mr-1' />
-              {statusText}
-            </Badge>
-          </div>
 
-          {/* Client Info */}
-          <div className='flex items-start'>
-            <div className='flex-shrink-0 w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mr-3'>
-              <User className='h-4 w-4 text-gray-600 dark:text-gray-300' />
+        {isSuccess ? (
+          <div className='py-6 text-center'>
+            <div className='w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4'>
+              <CheckCircle className='h-6 w-6 text-emerald-600' />
             </div>
-            <div>
-              <p className='text-sm font-medium text-gray-900 dark:text-gray-100'>
-                Cliente
-              </p>
-              <p className='text-sm text-gray-600 dark:text-gray-400'>
-                {appointment.clientName}
-              </p>
-            </div>
+            <h3 className='text-lg font-medium mb-2'>
+              Agendamento Confirmado!
+            </h3>
+            <p className='text-gray-600'>{getSuccessMessage()}</p>
           </div>
+        ) : (
+          <>
+            <div className='py-4'>
+              <div className='flex items-center justify-between mb-6'>
+                <div className='flex items-center'>
+                  <div className='w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center'>
+                    <User className='h-5 w-5 text-gray-600' />
+                  </div>
+                  <div className='ml-3'>
+                    <h3 className='font-medium'>{getClientInfo().name}</h3>
+                    <p className='text-sm text-gray-600 dark:text-gray-400'>
+                      {appointment.service.name}
+                    </p>
+                    {appointment.isProviderToProvider && (
+                      <Badge variant='secondary' className='mt-1'>
+                        Provedor para Provedor
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                <Badge
+                  variant='outline'
+                  className={getStatusColor(appointment.status)}
+                >
+                  {getStatusText(appointment.status)}
+                </Badge>
+              </div>
 
-          {/* Provider Info */}
-          <div className='flex items-start'>
-            <div className='flex-shrink-0 w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mr-3'>
-              <Building className='h-4 w-4 text-gray-600 dark:text-gray-300' />
-            </div>
-            <div>
-              <p className='text-sm font-medium text-gray-900 dark:text-gray-100'>
-                Prestador
-              </p>
-              <p className='text-sm text-gray-600 dark:text-gray-400'>
-                {appointment.providerName}
-              </p>
-            </div>
-          </div>
+              <div className='space-y-4'>
+                <div className='flex items-start'>
+                  <div className='w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3'>
+                    <CalendarIcon className='h-4 w-4 text-blue-600' />
+                  </div>
+                  <div>
+                    <p className='text-sm font-medium'>Data</p>
+                    <p className='text-sm text-gray-600 dark:text-gray-400'>
+                      {format(
+                        appointment.date,
+                        "EEEE, dd 'de' MMMM 'de' yyyy",
+                        { locale: ptBR }
+                      )}
+                    </p>
+                  </div>
+                </div>
 
-          {/* Service Info */}
-          <div className='flex items-start'>
-            <div className='flex-shrink-0 w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mr-3'>
-              <Briefcase className='h-4 w-4 text-gray-600 dark:text-gray-300' />
-            </div>
-            <div>
-              <p className='text-sm font-medium text-gray-900 dark:text-gray-100'>
-                Serviço
-              </p>
-              <p className='text-sm text-gray-600 dark:text-gray-400'>
-                {appointment.serviceName} ({appointment.duration} min)
-              </p>
-            </div>
-          </div>
+                <div className='flex items-start'>
+                  <div className='w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3'>
+                    <Clock className='h-4 w-4 text-blue-600' />
+                  </div>
+                  <div>
+                    <p className='text-sm font-medium'>Horário</p>
+                    <p className='text-sm text-gray-600 dark:text-gray-400'>
+                      {appointment.startTime} - {appointment.endTime}
+                    </p>
+                  </div>
+                </div>
 
-          {/* Date and Time */}
-          <div className='flex items-start'>
-            <div className='flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mr-3'>
-              <CalendarIcon className='h-4 w-4 text-blue-600 dark:text-blue-300' />
-            </div>
-            <div>
-              <p className='text-sm font-medium text-gray-900 dark:text-gray-100'>
-                Data e Hora
-              </p>
-              <p className='text-sm text-gray-600 dark:text-gray-400'>
-                {format(appointment.date, "EEEE, dd 'de' MMMM 'de' yyyy", {
-                  locale: ptBR,
-                })}{' '}
-                às {appointment.time}
-              </p>
-            </div>
-          </div>
+                <div className='flex items-start'>
+                  <div className='w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3'>
+                    {getAppointmentTypeIcon(appointment.type)}
+                  </div>
+                  <div>
+                    <p className='text-sm font-medium'>Tipo</p>
+                    <p className='text-sm text-gray-600 dark:text-gray-400'>
+                      {getAppointmentTypeText(appointment.type)}
+                    </p>
+                  </div>
+                </div>
 
-          {/* Appointment Type */}
-          <div className='flex items-start'>
-            <div className='flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center mr-3'>
-              {/* Choose an icon for type */}
-              <Briefcase className='h-4 w-4 text-purple-600 dark:text-purple-300' />
+                {appointment.location && (
+                  <div className='flex items-start'>
+                    <div className='w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3'>
+                      <MapPin className='h-4 w-4 text-blue-600' />
+                    </div>
+                    <div>
+                      <p className='text-sm font-medium'>Local</p>
+                      <p className='text-sm text-gray-600'>
+                        {appointment.location}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className='flex items-start'>
+                  <div className='w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3'>
+                    {getStatusIcon(appointment.status)}
+                  </div>
+                  <div>
+                    <p className='text-sm font-medium'>Status</p>
+                    <p className='text-sm text-gray-600 dark:text-gray-400'>
+                      {getStatusText(appointment.status)}
+                    </p>
+                  </div>
+                </div>
+
+                {appointment.client?.user?.email && (
+                  <div className='flex items-start'>
+                    <div className='w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3'>
+                      <Mail className='h-4 w-4 text-blue-600' />
+                    </div>
+                    <div>
+                      <p className='text-sm font-medium'>Email</p>
+                      <p className='text-sm text-gray-600 dark:text-gray-400'>
+                        {appointment.client?.user?.email}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {appointment.client?.user?.phone && (
+                  <div className='flex items-start'>
+                    <div className='w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3'>
+                      <PhoneCall className='h-4 w-4 text-blue-600' />
+                    </div>
+                    <div>
+                      <p className='text-sm font-medium'>Telefone</p>
+                      <p className='text-sm text-gray-600 dark:text-gray-400'>
+                        {appointment.client.user.phone}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {appointment.notes && (
+                <div className='mt-6 p-3 bg-muted rounded-md'>
+                  <p className='text-sm font-medium mb-2 dark:text-gray-400'>
+                    Notas
+                  </p>
+                  <p className='text-sm text-gray-600 dark:text-gray-500'>
+                    {appointment.notes}
+                  </p>
+                </div>
+              )}
+
+              {getClientInfo().email && (
+                <div className='flex items-start'>
+                  <div className='w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3'>
+                    <Mail className='h-4 w-4 text-blue-600' />
+                  </div>
+                  <div>
+                    <p className='text-sm font-medium'>Email</p>
+                    <p className='text-sm text-gray-600 dark:text-gray-400'>
+                      {getClientInfo().email}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {getClientInfo().phone && (
+                <div className='flex items-start'>
+                  <div className='w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3'>
+                    <PhoneCall className='h-4 w-4 text-blue-600' />
+                  </div>
+                  <div>
+                    <p className='text-sm font-medium'>Telefone</p>
+                    <p className='text-sm text-gray-600 dark:text-gray-400'>
+                      {getClientInfo().phone}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
-            <div>
-              <p className='text-sm font-medium text-gray-900 dark:text-gray-100'>
-                Tipo
-              </p>
-              <p className='text-sm text-gray-600 dark:text-gray-400'>
-                {appointment.type === 'VIRTUAL' ? 'Virtual' : 'Presencial'}
-              </p>
-            </div>
-          </div>
-        </div>
-        <DialogFooter className='sm:justify-between gap-2 flex-wrap'>
-          {' '}
-          {/* Adjust footer layout */}
-          <Button variant='outline' onClick={onClose} disabled={isLoading}>
-            Fechar
-          </Button>
-          <div className='flex gap-2 flex-wrap justify-end'>
-            {' '}
-            {/* Group action buttons */}
-            {/* Provider Actions */}
-            {isProvider &&
-              appointment.status === PrismaAppointmentStatus.PENDING && (
+
+            <DialogFooter>
+              {appointment.status === 'PENDING' && (
                 <>
-                  <Button
-                    variant='destructive'
-                    onClick={() => handleAction(onReject)}
-                    disabled={isLoading}
-                    size='sm'
-                  >
-                    {isLoading ? (
-                      <Loader2 className='h-4 w-4 animate-spin mr-2' />
-                    ) : (
-                      <XCircle className='h-4 w-4 mr-2' />
-                    )}{' '}
-                    Rejeitar
+                  <Button variant='outline' onClick={onClose}>
+                    Cancelar
                   </Button>
                   <Button
-                    onClick={() => handleAction(onConfirm)}
-                    disabled={isLoading}
-                    size='sm'
-                    className='bg-green-600 hover:bg-green-700'
+                    onClick={handleConfirm}
+                    disabled={isSubmitting}
+                    className='bg-emerald-600 hover:bg-emerald-700'
                   >
-                    {isLoading ? (
-                      <Loader2 className='h-4 w-4 animate-spin mr-2' />
-                    ) : (
-                      <CheckCircle className='h-4 w-4 mr-2' />
-                    )}{' '}
-                    Confirmar
+                    {isSubmitting ? 'Confirmando...' : 'Confirmar Agendamento'}
                   </Button>
                 </>
               )}
-            {isProvider &&
-              appointment.status === PrismaAppointmentStatus.CONFIRMED && (
-                <Button
-                  onClick={() => handleAction(onComplete)}
-                  disabled={isLoading}
-                  size='sm'
-                  className='bg-blue-600 hover:bg-blue-700'
-                >
-                  {isLoading ? (
-                    <Loader2 className='h-4 w-4 animate-spin mr-2' />
-                  ) : (
-                    <Check className='h-4 w-4 mr-2' />
-                  )}{' '}
-                  Marcar como Concluído
-                </Button>
+
+              {appointment.status === 'CONFIRMED' && (
+                <>
+                  <Button variant='outline' onClick={onClose}>
+                    Fechar
+                  </Button>
+                  <Button className='bg-emerald-600 hover:bg-emerald-700'>
+                    Marcar como Concluído
+                  </Button>
+                </>
               )}
-            {/* Client/Provider Cancel Action (if applicable) */}
-            {(isClient || isProvider) &&
-              [
-                PrismaAppointmentStatus.PENDING,
-                PrismaAppointmentStatus.CONFIRMED,
-              ].includes(appointment.status) && (
-                // Add logic here to check if cancellation is allowed based on time (e.g., > 48h)
-                // const canCancel = isCancellationAllowed(appointment.date);
-                // For now, always show if status allows
-                <Button
-                  variant='destructive'
-                  onClick={() => handleAction(onCancel)}
-                  disabled={isLoading} // || !canCancel
-                  size='sm'
-                >
-                  {isLoading ? (
-                    <Loader2 className='h-4 w-4 animate-spin mr-2' />
-                  ) : (
-                    <XCircle className='h-4 w-4 mr-2' />
-                  )}{' '}
-                  Cancelar Agendamento
-                </Button>
+
+              {(appointment.status === 'CANCELLED' ||
+                appointment.status === 'COMPLETED') && (
+                <Button onClick={onClose}>Fechar</Button>
               )}
-          </div>
-        </DialogFooter>
+            </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   )

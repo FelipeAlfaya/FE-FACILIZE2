@@ -57,7 +57,6 @@ export function PaymentConfirmation({
 
     fetchSubscriptionDetails()
 
-    // Configurar EventSource para atualizações em tempo real
     const eventSource = new EventSource(
       `${process.env.NEXT_PUBLIC_API_URL}payments/subscription-events?subscriptionId=${subscription.id}`
     )
@@ -219,3 +218,4 @@ export function PaymentConfirmation({
     </CardContent>
   )
 }
+

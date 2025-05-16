@@ -65,7 +65,7 @@ export function DashboardHeader() {
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(true)
   const [avatarSrc, setAvatarSrc] = useState<string>('')
   const [notificationsOpen, setNotificationsOpen] = useState(false)
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(true)
   const [mobileOpen, setMobileOpen] = useState(false)
   const { theme, setTheme } = useTheme()
   const { user } = useAuth()
