@@ -66,30 +66,33 @@ export function ProvidersList() {
         const data = await response.json()
 
         const transformedProviders: TransformedProvider[] = data.data.map(
-          (provider: any) => ({
-            id: provider.id.toString(),
-            name: provider.name,
-            email: provider.email,
-            avatar: provider.avatar,
-            specialty: provider.provider?.specialty || null,
-            location: provider.address
-              ? `${provider.address.city || ''}, ${
-                  provider.address.state || ''
-                }`.trim()
-              : 'Localização não informada',
-            rating: provider.provider?.provider_rating || null,
-            servicesCount: provider.provider?.services?.length || 0,
-            price: provider.provider?.services?.[0]?.price || 0,
-            description: provider.provider?.description || null,
-            providerType: provider.provider?.providerType || null,
-            services:
-              provider.provider?.services?.map((service: any) => ({
-                id: service.id.toString(),
-                name: service.name,
-                price: service.price,
-                duration: service.duration,
-              })) || [],
-          })
+          (provider: any) => {
+            return {
+              id: provider.id.toString(),
+              providerId: provider.provider.id,
+              name: provider.name,
+              email: provider.email,
+              avatar: provider.avatar,
+              specialty: provider.provider?.specialty || null,
+              location: provider.address
+                ? `${provider.address.city || ''}, ${
+                    provider.address.state || ''
+                  }`.trim()
+                : 'Localização não informada',
+              rating: provider.provider?.provider_rating || null,
+              servicesCount: provider.provider?.services?.length || 0,
+              price: provider.provider?.services?.[0]?.price || 0,
+              description: provider.provider?.description || null,
+              providerType: provider.provider?.providerType || null,
+              services:
+                provider.provider?.services?.map((service: any) => ({
+                  id: service.id,
+                  name: service.name,
+                  price: service.price,
+                  duration: service.duration,
+                })) || [],
+            }
+          }
         )
 
         setProviders(transformedProviders)
@@ -202,11 +205,9 @@ export function ProvidersList() {
           >
             <CardContent className='p-0 flex flex-col flex-grow'>
               <div className='p-6 flex flex-col flex-grow'>
-                {/* Updated this section to fix price alignment */}
                 <div className='flex justify-between items-start mb-4 gap-2'>
                   <div className='min-w-0 flex-1'>
                     {' '}
-                    {/* Added min-w-0 and flex-1 */}
                     <h3 className='font-bold truncate'>{provider.name}</h3>
                     <div className='flex items-center text-sm text-gray-600 mt-1'>
                       <Mail className='h-4 w-4 mr-1 flex-shrink-0' />

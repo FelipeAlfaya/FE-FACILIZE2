@@ -41,6 +41,18 @@ export function ScheduleModal({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [availableSlots, setAvailableSlots] = useState<string[]>([])
+  const [location, setLocation] = useState('')
+  const [notes, setNotes] = useState('')
+
+  function formatDate(receivedDate: Date | undefined) {
+    if (!receivedDate) return null
+    const date = new Date(receivedDate)
+    date.setUTCHours(0, 0, 0, 0)
+    return date.toISOString()
+  }
+
+  const formattedDate = formatDate(date)
+  console.log('formatted date', formattedDate)
 
   useEffect(() => {
     const fetchAvailability = async () => {
@@ -104,7 +116,21 @@ export function ScheduleModal({
         .padStart(2, '0')}:${endTime.getMinutes().toString().padStart(2, '0')}`
 
       const token =
-        localStorage.getItem('token') || sessionStorage.getItem('token')
+        localStorage.getItem('access_token') ||
+        sessionStorage.getItem('access_token')
+
+      const requestBody = {
+        providerId: provider.providerId,
+        serviceId: Number(selectedService),
+        date: formatDate(date),
+        startTime: time,
+        endTime: endTimeString,
+        type: 'PRESENTIAL',
+        location,
+        notes,
+      }
+
+      console.log('Request payload:', requestBody)
 
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}appointments`,
@@ -114,19 +140,20 @@ export function ScheduleModal({
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({
-            providerId: provider.id,
-            serviceId: selectedService,
-            date,
-            startTime: time,
-            endTime: endTimeString,
-            type: 'PRESENTIAL', // ou 'VIRTUAL' se for o caso
-          }),
+          body: JSON.stringify(requestBody),
         }
       )
 
+      console.log('Response status:', response.status)
+      const responseData = await response.json()
+      console.log('Response data:', responseData)
+
       if (!response.ok) {
-        throw new Error('Erro ao criar agendamento')
+        throw new Error(
+          `Erro ao criar agendamento: ${
+            responseData.message || JSON.stringify(responseData)
+          }`
+        )
       }
 
       setIsSuccess(true)
@@ -172,13 +199,12 @@ export function ScheduleModal({
             <p className='text-gray-600'>
               Seu agendamento com {provider.name} foi confirmado para{' '}
               {date && format(date, "dd 'de' MMMM", { locale: ptBR })} às {time}
-              .
+              {location && ` no ${location}`}.
             </p>
           </div>
         ) : (
           <>
             <div className='grid gap-4 py-4'>
-              {/* Seleção de Serviço */}
               <div className='grid gap-2'>
                 <label className='text-sm font-medium'>
                   Selecione um serviço
@@ -330,6 +356,29 @@ export function ScheduleModal({
                           .find((s) => s.id === selectedService)
                           ?.price.toFixed(2)}
                       </span>
+                    </div>
+
+                    <div className='grid gap-2'>
+                      <label className='text-sm font-medium'>
+                        Local do Atendimento
+                      </label>
+                      <input
+                        type='text'
+                        className='flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring'
+                        placeholder='Ex: Escritório Central'
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                      />
+                    </div>
+
+                    <div className='grid gap-2'>
+                      <label className='text-sm font-medium'>Observações</label>
+                      <textarea
+                        className='flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring'
+                        placeholder='Adicione informações importantes sobre o agendamento'
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                      />
                     </div>
                   </div>
                 </div>

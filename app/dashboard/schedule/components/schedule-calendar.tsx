@@ -103,7 +103,6 @@ export function ScheduleCalendar() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Buscar agendamentos ao carregar o componente ou mudar a data
   useEffect(() => {
     const token =
       localStorage.getItem('access_token') ||
@@ -223,7 +222,10 @@ export function ScheduleCalendar() {
   }
 
   const handleConfirmAppointment = async (appointmentId: number) => {
-    const token = localStorage.getItem('access_token')
+    const token =
+      localStorage.getItem('access_token') ||
+      sessionStorage.getItem('access_token')
+
     try {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}appointments/${appointmentId}/status`,
@@ -233,7 +235,12 @@ export function ScheduleCalendar() {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ status: 'CONFIRMED' }),
+          body: JSON.stringify({
+            status: 'CONFIRMED',
+            changeStatusDto: {
+              status: 'CONFIRMED',
+            },
+          }),
         }
       )
 
@@ -243,10 +250,26 @@ export function ScheduleCalendar() {
 
       const updatedAppointment = await response.json()
 
-      // Atualizar lista de agendamentos
+      // Update appointments list
       setAppointments((prev) =>
         prev.map((a) =>
-          a.id === updatedAppointment.id ? updatedAppointment : a
+          a.id === updatedAppointment.id
+            ? {
+                ...updatedAppointment,
+                date: new Date(updatedAppointment.date),
+                createdAt: new Date(updatedAppointment.createdAt),
+                updatedAt: new Date(updatedAppointment.updatedAt),
+                completedAt: updatedAppointment.completedAt
+                  ? new Date(updatedAppointment.completedAt)
+                  : null,
+                cancelledAt: updatedAppointment.cancelledAt
+                  ? new Date(updatedAppointment.cancelledAt)
+                  : null,
+                confirmedAt: updatedAppointment.confirmedAt
+                  ? new Date(updatedAppointment.confirmedAt)
+                  : null,
+              }
+            : a
         )
       )
 
@@ -306,51 +329,81 @@ export function ScheduleCalendar() {
     }
   }
 
-  // const handleCancelAppointment = async (appointmentId: number) => {
-  //   const token = localStorage.getItem('access_token')
-  //   try {
-  //     const response = await fetch(
-  //       `${process.env.NEXT_PUBLIC_API_URL}appointments/${appointmentId}/status`,
-  //       {
-  //         method: 'PUT',
-  //         headers: {
-  //           'Content-Type': 'application/json',
-  //           Authorization: `Bearer ${token}`,
-  //         },
-  //         body: JSON.stringify({
-  //           status: 'CANCELLED',
-  //           cancelledBy:
-  //             token?.user.type === 'PROVIDER' ? 'PROVIDER' : 'CLIENT',
-  //         }),
-  //       }
-  //     )
+  const handleCancelAppointment = async (appointmentId: number) => {
+    const token =
+      localStorage.getItem('access_token') ||
+      sessionStorage.getItem('access_token')
 
-  //     if (!response.ok) {
-  //       throw new Error('Erro ao cancelar agendamento')
-  //     }
+    if (!token) {
+      toast({
+        title: 'Erro',
+        description:
+          'Você precisa estar autenticado para cancelar um agendamento',
+        variant: 'destructive',
+      })
+      return
+    }
 
-  //     const updatedAppointment = await response.json()
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}appointments/${appointmentId}/status`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            status: 'CANCELLED',
+            changeStatusDto: {
+              status: 'CANCELLED',
+            },
+          }),
+        }
+      )
 
-  //     // Atualizar lista de agendamentos
-  //     setAppointments((prev) =>
-  //       prev.map((a) =>
-  //         a.id === updatedAppointment.id ? updatedAppointment : a
-  //       )
-  //     )
+      if (!response.ok) {
+        throw new Error('Erro ao cancelar agendamento')
+      }
 
-  //     toast({
-  //       title: 'Sucesso',
-  //       description: 'Agendamento cancelado com sucesso!',
-  //     })
-  //   } catch (error) {
-  //     console.error('Error cancelling appointment:', error)
-  //     toast({
-  //       title: 'Erro',
-  //       description: 'Não foi possível cancelar o agendamento',
-  //       variant: 'destructive',
-  //     })
-  //   }
-  // }
+      const updatedAppointment = await response.json()
+
+      // Update appointments list with proper date handling
+      setAppointments((prev) =>
+        prev.map((a) =>
+          a.id === updatedAppointment.id
+            ? {
+                ...updatedAppointment,
+                date: new Date(updatedAppointment.date),
+                createdAt: new Date(updatedAppointment.createdAt),
+                updatedAt: new Date(updatedAppointment.updatedAt),
+                completedAt: updatedAppointment.completedAt
+                  ? new Date(updatedAppointment.completedAt)
+                  : null,
+                cancelledAt: updatedAppointment.cancelledAt
+                  ? new Date(updatedAppointment.cancelledAt)
+                  : null,
+                confirmedAt: updatedAppointment.confirmedAt
+                  ? new Date(updatedAppointment.confirmedAt)
+                  : null,
+              }
+            : a
+        )
+      )
+
+      toast({
+        title: 'Sucesso',
+        description: 'Agendamento cancelado com sucesso!',
+      })
+    } catch (error) {
+      console.error('Error cancelling appointment:', error)
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível cancelar o agendamento',
+        variant: 'destructive',
+      })
+    }
+  }
 
   // Function to get dates with appointments for highlighting in calendar
   const getDatesWithAppointments = () => {
@@ -714,7 +767,13 @@ export function ScheduleCalendar() {
                                     Confirmar
                                   </DropdownMenuItem>
                                 )}
-                                {/* ...other menu items... */}
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleCancelAppointment(appointment.id)
+                                  }
+                                >
+                                  Cancelar
+                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>

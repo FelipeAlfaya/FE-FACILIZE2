@@ -72,8 +72,8 @@ export default function SchedulePage() {
             </TabsContent>
             <TabsContent value='availability'>
               <div className='text-center py-12 text-gray-500'>
-                <p>Funcionalidade em desenvolvimento.</p>
-                <p>Em breve você poderá gerenciar sua disponibilidade aqui.</p>
+                {/* <p>Funcionalidade em desenvolvimento.</p>
+                <p>Em breve você poderá gerenciar sua disponibilidade aqui.</p> */}
               </div>
             </TabsContent>
           </Tabs>

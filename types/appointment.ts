@@ -85,6 +85,7 @@ export type User = {
 
 export type TransformedProvider = {
   id: string
+  providerId: number
   name: string
   email: string
   avatar: string | null

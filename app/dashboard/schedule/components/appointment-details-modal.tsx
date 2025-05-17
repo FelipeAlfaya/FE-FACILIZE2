@@ -260,6 +260,34 @@ export function AppointmentDetailsModal({
                   </div>
                 )}
 
+                {getClientInfo().email && (
+                  <div className='flex items-start'>
+                    <div className='w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3'>
+                      <Mail className='h-4 w-4 text-blue-600' />
+                    </div>
+                    <div>
+                      <p className='text-sm font-medium'>Email</p>
+                      <p className='text-sm text-gray-600 dark:text-gray-400'>
+                        {getClientInfo().email}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {getClientInfo().phone && (
+                  <div className='flex items-start'>
+                    <div className='w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3'>
+                      <PhoneCall className='h-4 w-4 text-blue-600' />
+                    </div>
+                    <div>
+                      <p className='text-sm font-medium'>Telefone</p>
+                      <p className='text-sm text-gray-600 dark:text-gray-400'>
+                        {getClientInfo().phone}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <div className='flex items-start'>
                   <div className='w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3'>
                     {getStatusIcon(appointment.status)}
@@ -271,34 +299,6 @@ export function AppointmentDetailsModal({
                     </p>
                   </div>
                 </div>
-
-                {appointment.client?.user?.email && (
-                  <div className='flex items-start'>
-                    <div className='w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3'>
-                      <Mail className='h-4 w-4 text-blue-600' />
-                    </div>
-                    <div>
-                      <p className='text-sm font-medium'>Email</p>
-                      <p className='text-sm text-gray-600 dark:text-gray-400'>
-                        {appointment.client?.user?.email}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {appointment.client?.user?.phone && (
-                  <div className='flex items-start'>
-                    <div className='w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3'>
-                      <PhoneCall className='h-4 w-4 text-blue-600' />
-                    </div>
-                    <div>
-                      <p className='text-sm font-medium'>Telefone</p>
-                      <p className='text-sm text-gray-600 dark:text-gray-400'>
-                        {appointment.client.user.phone}
-                      </p>
-                    </div>
-                  </div>
-                )}
               </div>
 
               {appointment.notes && (
@@ -309,34 +309,6 @@ export function AppointmentDetailsModal({
                   <p className='text-sm text-gray-600 dark:text-gray-500'>
                     {appointment.notes}
                   </p>
-                </div>
-              )}
-
-              {getClientInfo().email && (
-                <div className='flex items-start'>
-                  <div className='w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3'>
-                    <Mail className='h-4 w-4 text-blue-600' />
-                  </div>
-                  <div>
-                    <p className='text-sm font-medium'>Email</p>
-                    <p className='text-sm text-gray-600 dark:text-gray-400'>
-                      {getClientInfo().email}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {getClientInfo().phone && (
-                <div className='flex items-start'>
-                  <div className='w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3'>
-                    <PhoneCall className='h-4 w-4 text-blue-600' />
-                  </div>
-                  <div>
-                    <p className='text-sm font-medium'>Telefone</p>
-                    <p className='text-sm text-gray-600 dark:text-gray-400'>
-                      {getClientInfo().phone}
-                    </p>
-                  </div>
                 </div>
               )}
             </div>
