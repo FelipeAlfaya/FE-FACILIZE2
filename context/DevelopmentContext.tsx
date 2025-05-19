@@ -1,6 +1,6 @@
 // context/DevelopmentContext.tsx
 import { createContext, useContext, ReactNode } from 'react'
-import { useRouter } from 'next/router'
+import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 
 interface DevelopmentContextProps {
@@ -24,7 +24,7 @@ export const DevelopmentProvider = ({
 
   useEffect(() => {
     if (isDevelopment && router.pathname !== '/development') {
-      router.replace('/development')
+      router.replace('/dashboard/development')
     }
   }, [isDevelopment, router])
 

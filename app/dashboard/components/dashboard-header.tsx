@@ -40,6 +40,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { subscribeToNotifications } from '@/services/notifications-api'
 import { cn } from '@/lib/utils'
+import { Avatar, AvatarFallback, AvatarImage } from '@radix-ui/react-avatar'
 
 type Notification = {
   id: string
@@ -52,26 +53,6 @@ type Notification = {
   createdAt: string
   link?: string
   actionable?: boolean
-}
-
-const subItems = {
-  title: 'Administração',
-  icon: BarChart3,
-  id: 'admin-page',
-  subItems: [
-    {
-      title: 'Usuários',
-      path: '/subtopic1/dashboard',
-    },
-    {
-      title: 'Admin Dashboard',
-      path: '/subtopic2/dashboard',
-    },
-    {
-      title: 'Configurações',
-      path: '/subtopic3/dashboard',
-    },
-  ],
 }
 
 const defaultAvatars: string[] = [
@@ -92,16 +73,6 @@ export function DashboardHeader() {
   const { user } = useAuth()
   const router = useRouter()
   const [isMobile, setIsMobile] = useState<boolean>(false)
-  const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>(
-    {}
-  )
-
-  const toggleSubMenu = (id: string) => {
-    setExpandedItems((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }))
-  }
 
   useEffect(() => {
     const checkIsMobile = () => {
@@ -210,7 +181,7 @@ export function DashboardHeader() {
 
   useEffect(() => {
     if (!isMobile) {
-      document.body.style.paddingLeft = collapsed ? '80px' : '256px' // 20rem = 80px, 64rem = 256px
+      document.body.style.paddingLeft = collapsed ? '80px' : '256px'
     } else {
       document.body.style.paddingLeft = '0'
     }
@@ -309,18 +280,19 @@ export function DashboardHeader() {
           setAvatarSrc(reader.result as string)
         }
         reader.readAsDataURL(blob)
-      } else {
-        setRandomDefaultAvatar()
       }
     } catch (error) {
       console.error('Error fetching avatar:', error)
-      setRandomDefaultAvatar()
     }
   }
 
-  const setRandomDefaultAvatar = () => {
-    const randomIndex = Math.floor(Math.random() * defaultAvatars.length)
-    setAvatarSrc(defaultAvatars[randomIndex])
+  const getNameInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((part) => part[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2)
   }
 
   const handleLogout = () => {
@@ -468,16 +440,16 @@ export function DashboardHeader() {
             </Link>
 
             <Link
-              href='admin'
+              href='/admin'
               className={cn(
                 'flex items-center p-2 rounded-md hover:bg-accent',
                 collapsed ? 'justify-center' : ''
               )}
               title={collapsed ? 'Administração' : undefined}
             >
-              <BarChart3 className='h-5 w-5' />
+              <BarChart3 className='h-5 w-5 text-red-500' />
               {!collapsed && (
-                <span className='ml-3 text-yellow'>Administração</span>
+                <span className='ml-3 text-red-500'>Administração</span>
               )}
             </Link>
 
@@ -598,13 +570,16 @@ export function DashboardHeader() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant='ghost' size='sm' className='justify-start'>
-                      <div className='flex items-center'>
-                        <img
-                          src={avatarSrc || '/placeholder.svg'}
-                          alt='Avatar'
-                          className='rounded-full w-5 h-5 mr-2 object-cover'
-                          onError={setRandomDefaultAvatar}
-                        />
+                      <div className='flex items-center space-x-4'>
+                        <Avatar>
+                          <AvatarImage
+                            src={user?.avatar || undefined}
+                            alt={user?.name}
+                          />
+                          <AvatarFallback>
+                            {getNameInitials(user?.name ?? '')}
+                          </AvatarFallback>
+                        </Avatar>
                         <span>Perfil</span>
                       </div>
                     </Button>
@@ -744,4 +719,3 @@ export function DashboardHeader() {
     </>
   )
 }
-

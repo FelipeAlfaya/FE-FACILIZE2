@@ -42,6 +42,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
 } from '@/components/ui/alert-dialog'
+import { DeleteConfirmationModal } from '@/app/dashboard/components/delete-confirmation-modal'
 
 interface User {
   id: number
@@ -143,7 +144,6 @@ export function UsersView() {
         throw new Error('Failed to delete user')
       }
 
-      // Remove user from local state
       setUsers(users.filter((u) => u.id !== user.id))
       setUserToDelete(null)
 
@@ -183,23 +183,20 @@ export function UsersView() {
   return (
     <div className='space-y-6'>
       <div className='flex items-center justify-between'>
-        <h2 className='text-3xl font-bold tracking-tight'>Users</h2>
-        <Button>
-          <Plus className='mr-2 h-4 w-4' />
-          Add User
-        </Button>
+        <h2 className='text-3xl font-bold tracking-tight'>Usuários</h2>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>User Management</CardTitle>
+          <CardTitle>Gerenciamento de usuários</CardTitle>
           <CardDescription>
-            Manage your users, their roles and permissions.
+            Gerencie os usuários da plataforma e monitore o status de cada um
+            deles.
           </CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div>Loading...</div>
+            <div>Carregando...</div>
           ) : (
             <>
               <div className='flex items-center justify-between mb-4'>
@@ -208,8 +205,8 @@ export function UsersView() {
                   <Input placeholder='Search users...' className='pl-8' />
                 </div>
                 <div className='flex gap-2'>
-                  <Button variant='outline'>Export</Button>
-                  <Button variant='outline'>Filter</Button>
+                  <Button variant='outline'>Exportar</Button>
+                  <Button variant='outline'>Filtrar</Button>
                 </div>
               </div>
 
@@ -268,54 +265,25 @@ export function UsersView() {
                             <DropdownMenuTrigger asChild>
                               <Button variant='ghost' size='icon'>
                                 <MoreHorizontal className='h-4 w-4' />
-                                <span className='sr-only'>Open menu</span>
+                                <span className='sr-only'>Abrir menu</span>
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align='end'>
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem>View details</DropdownMenuItem>
-                              <DropdownMenuItem>Edit user</DropdownMenuItem>
+                              <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                              <DropdownMenuItem>Ver detalhes</DropdownMenuItem>
+                              <DropdownMenuItem>
+                                Editar usuário
+                              </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <DropdownMenuItem
-                                    onSelect={(e) => {
-                                      e.preventDefault()
-                                      setUserToDelete(user)
-                                    }}
-                                    className='text-red-600'
-                                  >
-                                    Delete user
-                                  </DropdownMenuItem>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>
-                                      Are you absolutely sure?
-                                    </AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      This action cannot be undone. This will
-                                      permanently delete {user.name}'s account
-                                      and remove their data from our servers.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel
-                                      onClick={() => setUserToDelete(null)}
-                                    >
-                                      Cancel
-                                    </AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() =>
-                                        user && handleDeleteUser(user)
-                                      }
-                                      className='bg-red-600 hover:bg-red-700'
-                                    >
-                                      Delete
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
+                              <DropdownMenuItem
+                                onSelect={(e) => {
+                                  e.preventDefault()
+                                  setUserToDelete(user)
+                                }}
+                                className='text-red-600'
+                              >
+                                Deletar usuário
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -323,6 +291,18 @@ export function UsersView() {
                     ))}
                   </TableBody>
                 </Table>
+
+                <DeleteConfirmationModal
+                  isOpen={!!userToDelete}
+                  onClose={() => setUserToDelete(null)}
+                  onConfirm={() =>
+                    userToDelete && handleDeleteUser(userToDelete)
+                  }
+                  title='Você tem certeza?'
+                  description={`Essa ação não pode ser desfeita. Isso vai deletar permanentemente a conta de ${
+                    userToDelete?.name || ''
+                  } e todos os dados associados a ela.`}
+                />
               </div>
 
               {meta && (
@@ -335,10 +315,10 @@ export function UsersView() {
                     }
                     disabled={currentPage === 1}
                   >
-                    Previous
+                    Anterior
                   </Button>
                   <div className='text-sm'>
-                    Page {meta.page} of {meta.last_page}
+                    Página {meta.page} de {meta.last_page}
                   </div>
                   <Button
                     variant='outline'
@@ -350,7 +330,7 @@ export function UsersView() {
                     }
                     disabled={currentPage === meta.last_page}
                   >
-                    Next
+                    Próxima
                   </Button>
                 </div>
               )}
@@ -361,4 +341,3 @@ export function UsersView() {
     </div>
   )
 }
-

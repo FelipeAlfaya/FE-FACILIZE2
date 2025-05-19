@@ -25,6 +25,7 @@ import { TaxResultsChart } from './tax-results-chart'
 import { FinancialNavigation } from './financial-navigation'
 import { TaxDetailsModal } from './tax-details-modal'
 import { toast } from 'sonner'
+import { DevelopmentProvider } from '@/context/DevelopmentContext'
 
 export type ActivityType = 'services' | 'commerce' | 'industry' | 'transport'
 export type AnnexType = '1' | '2' | '3' | '4' | '5' | '6'
@@ -411,440 +412,466 @@ export function TaxCalculator() {
   }, [activity])
 
   return (
-    <div className='container mx-auto p-6'>
-      <FinancialNavigation />
+    <DevelopmentProvider isDevelopment={true}>
+      <div className='container mx-auto p-6'>
+        <FinancialNavigation />
 
-      <div className='grid gap-6 md:grid-cols-2'>
-        <Card>
-          <CardHeader>
-            <CardTitle>Calculadora de Impostos</CardTitle>
-            <CardDescription>
-              Calcule os impostos devidos com base no regime tributário e
-              faturamento
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs
-              defaultValue={period}
-              className='mb-6'
-              onValueChange={(value: string) => setPeriod(value as PeriodType)}
-            >
-              <TabsList className='grid w-full grid-cols-2'>
-                <TabsTrigger value='monthly'>Mensal</TabsTrigger>
-                <TabsTrigger value='yearly'>Anual</TabsTrigger>
-              </TabsList>
-              <TabsContent value='monthly' className='mt-4 space-y-4'>
-                <div className='space-y-2'>
-                  <Label htmlFor='tax-regime'>Regime Tributário</Label>
-                  <Select value={taxRegime} onValueChange={setTaxRegime}>
-                    <SelectTrigger id='tax-regime'>
-                      <SelectValue placeholder='Selecione o regime tributário' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='simples'>Simples Nacional</SelectItem>
-                      <SelectItem value='presumido'>Lucro Presumido</SelectItem>
-                      <SelectItem value='real'>Lucro Real</SelectItem>
-                      <SelectItem value='mei'>MEI</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className='space-y-2'>
-                  <Label htmlFor='activity'>Atividade Principal</Label>
-                  <Select
-                    value={activity}
-                    onValueChange={(value: ActivityType) => setActivity(value)}
-                  >
-                    <SelectTrigger id='activity'>
-                      <SelectValue placeholder='Selecione a atividade principal' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='services'>
-                        Prestação de Serviços
-                      </SelectItem>
-                      <SelectItem value='commerce'>Comércio</SelectItem>
-                      <SelectItem value='industry'>Indústria</SelectItem>
-                      <SelectItem value='transport'>Transporte</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {taxRegime === 'simples' && activity === 'services' && (
-                  <div className='space-y-2'>
-                    <Label htmlFor='simples-annex'>
-                      Anexo do Simples Nacional
-                    </Label>
-                    <Select
-                      value={annex}
-                      onValueChange={(value: AnnexType) => setAnnex(value)}
-                    >
-                      <SelectTrigger id='simples-annex'>
-                        <SelectValue placeholder='Selecione o anexo do Simples' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value='3'>
-                          Anexo III - Serviços em geral
-                        </SelectItem>
-                        <SelectItem value='4'>
-                          Anexo IV - Serviços específicos
-                        </SelectItem>
-                        <SelectItem value='5'>
-                          Anexo V - Serviços técnicos
-                        </SelectItem>
-                        <SelectItem value='6'>
-                          Anexo VI - Serviços profissionais
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                <div className='space-y-2'>
-                  <Label htmlFor='revenue'>Faturamento Mensal (R$)</Label>
-                  <Input
-                    id='revenue'
-                    type='number'
-                    value={revenue}
-                    onChange={(e) => setRevenue(e.target.value)}
-                    placeholder='0,00'
-                  />
-                </div>
-
-                <div className='space-y-2'>
-                  <Label htmlFor='expenses'>Despesas Mensais (R$)</Label>
-                  <Input
-                    id='expenses'
-                    type='number'
-                    value={expenses}
-                    onChange={(e) => setExpenses(e.target.value)}
-                    placeholder='0,00'
-                  />
-                </div>
-              </TabsContent>
-              <TabsContent value='yearly' className='mt-4 space-y-4'>
-                <div className='space-y-2'>
-                  <Label htmlFor='tax-regime-yearly'>Regime Tributário</Label>
-                  <Select value={taxRegime} onValueChange={setTaxRegime}>
-                    <SelectTrigger id='tax-regime-yearly'>
-                      <SelectValue placeholder='Selecione o regime tributário' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='simples'>Simples Nacional</SelectItem>
-                      <SelectItem value='presumido'>Lucro Presumido</SelectItem>
-                      <SelectItem value='real'>Lucro Real</SelectItem>
-                      <SelectItem value='mei'>MEI</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className='space-y-2'>
-                  <Label htmlFor='activity-yearly'>Atividade Principal</Label>
-                  <Select
-                    value={activity}
-                    onValueChange={(value: ActivityType) => setActivity(value)}
-                  >
-                    <SelectTrigger id='activity-yearly'>
-                      <SelectValue placeholder='Selecione a atividade principal' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='services'>
-                        Prestação de Serviços
-                      </SelectItem>
-                      <SelectItem value='commerce'>Comércio</SelectItem>
-                      <SelectItem value='industry'>Indústria</SelectItem>
-                      <SelectItem value='transport'>Transporte</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {taxRegime === 'simples' && activity === 'services' && (
-                  <div className='space-y-2'>
-                    <Label htmlFor='simples-annex-yearly'>
-                      Anexo do Simples Nacional
-                    </Label>
-                    <Select
-                      value={annex}
-                      onValueChange={(value: AnnexType) => setAnnex(value)}
-                    >
-                      <SelectTrigger id='simples-annex-yearly'>
-                        <SelectValue placeholder='Selecione o anexo do Simples' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value='3'>
-                          Anexo III - Serviços em geral
-                        </SelectItem>
-                        <SelectItem value='4'>
-                          Anexo IV - Serviços específicos
-                        </SelectItem>
-                        <SelectItem value='5'>
-                          Anexo V - Serviços técnicos
-                        </SelectItem>
-                        <SelectItem value='6'>
-                          Anexo VI - Serviços profissionais
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                <div className='space-y-2'>
-                  <Label htmlFor='revenue-yearly'>Faturamento Anual (R$)</Label>
-                  <Input
-                    id='revenue-yearly'
-                    type='number'
-                    value={
-                      period === 'yearly'
-                        ? revenue
-                        : (Number.parseFloat(revenue) * 12).toString()
-                    }
-                    onChange={(e) =>
-                      setRevenue(
-                        period === 'yearly'
-                          ? e.target.value
-                          : (Number.parseFloat(e.target.value) / 12).toString()
-                      )
-                    }
-                    placeholder='0,00'
-                  />
-                </div>
-
-                <div className='space-y-2'>
-                  <Label htmlFor='expenses-yearly'>Despesas Anuais (R$)</Label>
-                  <Input
-                    id='expenses-yearly'
-                    type='number'
-                    value={
-                      period === 'yearly'
-                        ? expenses
-                        : (Number.parseFloat(expenses) * 12).toString()
-                    }
-                    onChange={(e) =>
-                      setExpenses(
-                        period === 'yearly'
-                          ? e.target.value
-                          : (Number.parseFloat(e.target.value) / 12).toString()
-                      )
-                    }
-                    placeholder='0,00'
-                  />
-                </div>
-              </TabsContent>
-            </Tabs>
-
-            <Button onClick={handleCalculate} className='w-full'>
-              Calcular Impostos
-            </Button>
-          </CardContent>
-        </Card>
-
-        {showResults && taxResult && (
+        <div className='grid gap-6 md:grid-cols-2'>
           <Card>
             <CardHeader>
-              <CardTitle>Resultado do Cálculo</CardTitle>
+              <CardTitle>Calculadora de Impostos</CardTitle>
               <CardDescription>
-                {taxRegime === 'simples'
-                  ? 'Simples Nacional'
-                  : taxRegime === 'presumido'
-                  ? 'Lucro Presumido'
-                  : taxRegime === 'real'
-                  ? 'Lucro Real'
-                  : 'MEI'}
-                {' - '}
-                {activity === 'services'
-                  ? 'Prestação de Serviços'
-                  : activity === 'commerce'
-                  ? 'Comércio'
-                  : activity === 'industry'
-                  ? 'Indústria'
-                  : 'Transporte'}
+                Calcule os impostos devidos com base no regime tributário e
+                faturamento
               </CardDescription>
             </CardHeader>
-            <CardContent className='space-y-6'>
-              <div className='grid gap-4 md:grid-cols-2'>
-                <div className='space-y-2'>
-                  <p className='text-sm text-muted-foreground'>Faturamento</p>
-                  <p className='text-2xl font-bold'>
-                    {formatCurrency(
-                      period === 'monthly'
-                        ? Number(revenue)
-                        : Number(revenue) / 12
-                    )}
-                  </p>
-                </div>
-                <div className='space-y-2'>
-                  <p className='text-sm text-muted-foreground'>
-                    Total de Impostos
-                  </p>
-                  <p className='text-2xl font-bold text-red-600'>
-                    {formatCurrency(taxResult.totalTax)}
-                  </p>
-                </div>
-              </div>
+            <CardContent>
+              <Tabs
+                defaultValue={period}
+                className='mb-6'
+                onValueChange={(value: string) =>
+                  setPeriod(value as PeriodType)
+                }
+              >
+                <TabsList className='grid w-full grid-cols-2'>
+                  <TabsTrigger value='monthly'>Mensal</TabsTrigger>
+                  <TabsTrigger value='yearly'>Anual</TabsTrigger>
+                </TabsList>
+                <TabsContent value='monthly' className='mt-4 space-y-4'>
+                  <div className='space-y-2'>
+                    <Label htmlFor='tax-regime'>Regime Tributário</Label>
+                    <Select value={taxRegime} onValueChange={setTaxRegime}>
+                      <SelectTrigger id='tax-regime'>
+                        <SelectValue placeholder='Selecione o regime tributário' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='simples'>
+                          Simples Nacional
+                        </SelectItem>
+                        <SelectItem value='presumido'>
+                          Lucro Presumido
+                        </SelectItem>
+                        <SelectItem value='real'>Lucro Real</SelectItem>
+                        <SelectItem value='mei'>MEI</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <Separator />
+                  <div className='space-y-2'>
+                    <Label htmlFor='activity'>Atividade Principal</Label>
+                    <Select
+                      value={activity}
+                      onValueChange={(value: ActivityType) =>
+                        setActivity(value)
+                      }
+                    >
+                      <SelectTrigger id='activity'>
+                        <SelectValue placeholder='Selecione a atividade principal' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='services'>
+                          Prestação de Serviços
+                        </SelectItem>
+                        <SelectItem value='commerce'>Comércio</SelectItem>
+                        <SelectItem value='industry'>Indústria</SelectItem>
+                        <SelectItem value='transport'>Transporte</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <div className='space-y-4'>
-                {Object.entries(taxResult.breakdown).map(([key, value]) => {
-                  if (typeof value !== 'number') return null
-
-                  let label = ''
-                  switch (key) {
-                    case 'irpj':
-                      label = 'IRPJ'
-                      break
-                    case 'csll':
-                      label = 'CSLL'
-                      break
-                    case 'pis':
-                      label = 'PIS'
-                      break
-                    case 'cofins':
-                      label = 'COFINS'
-                      break
-                    case 'iss':
-                      label = 'ISS'
-                      break
-                    case 'icms':
-                      label = 'ICMS'
-                      break
-                    case 'ipi':
-                      label = 'IPI'
-                      break
-                    case 'cpp':
-                      label = 'CPP'
-                      break
-                    case 'fixedFee':
-                      label = 'Taxa Fixa'
-                      break
-                    case 'municipalTax':
-                      label =
-                        activity === 'services' || activity === 'transport'
-                          ? 'ISS'
-                          : 'ICMS'
-                      break
-                    default:
-                      label = key.toUpperCase()
-                  }
-
-                  return (
-                    <div key={key} className='flex justify-between'>
-                      <span>{label}</span>
-                      <span>{formatCurrency(value)}</span>
+                  {taxRegime === 'simples' && activity === 'services' && (
+                    <div className='space-y-2'>
+                      <Label htmlFor='simples-annex'>
+                        Anexo do Simples Nacional
+                      </Label>
+                      <Select
+                        value={annex}
+                        onValueChange={(value: AnnexType) => setAnnex(value)}
+                      >
+                        <SelectTrigger id='simples-annex'>
+                          <SelectValue placeholder='Selecione o anexo do Simples' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value='3'>
+                            Anexo III - Serviços em geral
+                          </SelectItem>
+                          <SelectItem value='4'>
+                            Anexo IV - Serviços específicos
+                          </SelectItem>
+                          <SelectItem value='5'>
+                            Anexo V - Serviços técnicos
+                          </SelectItem>
+                          <SelectItem value='6'>
+                            Anexo VI - Serviços profissionais
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                  )
-                })}
-              </div>
+                  )}
 
-              <div className='h-64'>
-                <TaxResultsChart
-                  results={{
-                    incomeTax: taxResult.breakdown.irpj || 0,
-                    socialSecurity: taxResult.breakdown.csll || 0,
-                    municipalTax:
-                      taxResult.breakdown.iss || taxResult.breakdown.icms || 0,
-                    otherTaxes:
-                      (taxResult.breakdown.pis || 0) +
-                      (taxResult.breakdown.cofins || 0) +
-                      (taxResult.breakdown.cpp || 0) +
-                      (taxResult.breakdown.ipi || 0),
-                    totalTax: taxResult.totalTax,
-                    effectiveRate: taxResult.effectiveRate,
-                  }}
-                />
-              </div>
+                  <div className='space-y-2'>
+                    <Label htmlFor='revenue'>Faturamento Mensal (R$)</Label>
+                    <Input
+                      id='revenue'
+                      type='number'
+                      value={revenue}
+                      onChange={(e) => setRevenue(e.target.value)}
+                      placeholder='0,00'
+                    />
+                  </div>
 
-              <div className='flex flex-wrap gap-2'>
-                <Button
-                  variant='outline'
-                  onClick={handleShowDetails}
-                  className='flex-1'
-                >
-                  Ver Detalhes
-                </Button>
-                <Button variant='outline' className='flex-1'>
-                  Comparar Regimes
-                </Button>
-                <Button className='flex-1'>Exportar Cálculo</Button>
-              </div>
+                  <div className='space-y-2'>
+                    <Label htmlFor='expenses'>Despesas Mensais (R$)</Label>
+                    <Input
+                      id='expenses'
+                      type='number'
+                      value={expenses}
+                      onChange={(e) => setExpenses(e.target.value)}
+                      placeholder='0,00'
+                    />
+                  </div>
+                </TabsContent>
+                <TabsContent value='yearly' className='mt-4 space-y-4'>
+                  <div className='space-y-2'>
+                    <Label htmlFor='tax-regime-yearly'>Regime Tributário</Label>
+                    <Select value={taxRegime} onValueChange={setTaxRegime}>
+                      <SelectTrigger id='tax-regime-yearly'>
+                        <SelectValue placeholder='Selecione o regime tributário' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='simples'>
+                          Simples Nacional
+                        </SelectItem>
+                        <SelectItem value='presumido'>
+                          Lucro Presumido
+                        </SelectItem>
+                        <SelectItem value='real'>Lucro Real</SelectItem>
+                        <SelectItem value='mei'>MEI</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className='space-y-2'>
+                    <Label htmlFor='activity-yearly'>Atividade Principal</Label>
+                    <Select
+                      value={activity}
+                      onValueChange={(value: ActivityType) =>
+                        setActivity(value)
+                      }
+                    >
+                      <SelectTrigger id='activity-yearly'>
+                        <SelectValue placeholder='Selecione a atividade principal' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='services'>
+                          Prestação de Serviços
+                        </SelectItem>
+                        <SelectItem value='commerce'>Comércio</SelectItem>
+                        <SelectItem value='industry'>Indústria</SelectItem>
+                        <SelectItem value='transport'>Transporte</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {taxRegime === 'simples' && activity === 'services' && (
+                    <div className='space-y-2'>
+                      <Label htmlFor='simples-annex-yearly'>
+                        Anexo do Simples Nacional
+                      </Label>
+                      <Select
+                        value={annex}
+                        onValueChange={(value: AnnexType) => setAnnex(value)}
+                      >
+                        <SelectTrigger id='simples-annex-yearly'>
+                          <SelectValue placeholder='Selecione o anexo do Simples' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value='3'>
+                            Anexo III - Serviços em geral
+                          </SelectItem>
+                          <SelectItem value='4'>
+                            Anexo IV - Serviços específicos
+                          </SelectItem>
+                          <SelectItem value='5'>
+                            Anexo V - Serviços técnicos
+                          </SelectItem>
+                          <SelectItem value='6'>
+                            Anexo VI - Serviços profissionais
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  <div className='space-y-2'>
+                    <Label htmlFor='revenue-yearly'>
+                      Faturamento Anual (R$)
+                    </Label>
+                    <Input
+                      id='revenue-yearly'
+                      type='number'
+                      value={
+                        period === 'yearly'
+                          ? revenue
+                          : (Number.parseFloat(revenue) * 12).toString()
+                      }
+                      onChange={(e) =>
+                        setRevenue(
+                          period === 'yearly'
+                            ? e.target.value
+                            : (
+                                Number.parseFloat(e.target.value) / 12
+                              ).toString()
+                        )
+                      }
+                      placeholder='0,00'
+                    />
+                  </div>
+
+                  <div className='space-y-2'>
+                    <Label htmlFor='expenses-yearly'>
+                      Despesas Anuais (R$)
+                    </Label>
+                    <Input
+                      id='expenses-yearly'
+                      type='number'
+                      value={
+                        period === 'yearly'
+                          ? expenses
+                          : (Number.parseFloat(expenses) * 12).toString()
+                      }
+                      onChange={(e) =>
+                        setExpenses(
+                          period === 'yearly'
+                            ? e.target.value
+                            : (
+                                Number.parseFloat(e.target.value) / 12
+                              ).toString()
+                        )
+                      }
+                      placeholder='0,00'
+                    />
+                  </div>
+                </TabsContent>
+              </Tabs>
+
+              <Button onClick={handleCalculate} className='w-full'>
+                Calcular Impostos
+              </Button>
             </CardContent>
           </Card>
-        )}
-      </div>
 
-      <div className='mt-8'>
-        <Card>
-          <CardHeader>
-            <CardTitle>Calendário Fiscal</CardTitle>
-            <CardDescription>
-              Próximos vencimentos de impostos e obrigações fiscais
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className='space-y-4'>
-              <div className='flex items-center justify-between rounded-lg border p-4'>
-                <div>
-                  <p className='font-medium'>Simples Nacional</p>
-                  <p className='text-sm text-muted-foreground'>
-                    DAS - Documento de Arrecadação do Simples
-                  </p>
+          {showResults && taxResult && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Resultado do Cálculo</CardTitle>
+                <CardDescription>
+                  {taxRegime === 'simples'
+                    ? 'Simples Nacional'
+                    : taxRegime === 'presumido'
+                    ? 'Lucro Presumido'
+                    : taxRegime === 'real'
+                    ? 'Lucro Real'
+                    : 'MEI'}
+                  {' - '}
+                  {activity === 'services'
+                    ? 'Prestação de Serviços'
+                    : activity === 'commerce'
+                    ? 'Comércio'
+                    : activity === 'industry'
+                    ? 'Indústria'
+                    : 'Transporte'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className='space-y-6'>
+                <div className='grid gap-4 md:grid-cols-2'>
+                  <div className='space-y-2'>
+                    <p className='text-sm text-muted-foreground'>Faturamento</p>
+                    <p className='text-2xl font-bold'>
+                      {formatCurrency(
+                        period === 'monthly'
+                          ? Number(revenue)
+                          : Number(revenue) / 12
+                      )}
+                    </p>
+                  </div>
+                  <div className='space-y-2'>
+                    <p className='text-sm text-muted-foreground'>
+                      Total de Impostos
+                    </p>
+                    <p className='text-2xl font-bold text-red-600'>
+                      {formatCurrency(taxResult.totalTax)}
+                    </p>
+                  </div>
                 </div>
-                <div className='text-right'>
-                  <p className='font-medium'>20/05/2023</p>
-                  <p className='text-sm text-muted-foreground'>
-                    Vencimento em 5 dias
-                  </p>
-                </div>
-              </div>
-              <div className='flex items-center justify-between rounded-lg border p-4'>
-                <div>
-                  <p className='font-medium'>INSS</p>
-                  <p className='text-sm text-muted-foreground'>
-                    Contribuição Previdenciária
-                  </p>
-                </div>
-                <div className='text-right'>
-                  <p className='font-medium'>15/05/2023</p>
-                  <p className='text-sm text-muted-foreground'>
-                    Vencido há 0 dias
-                  </p>
-                </div>
-              </div>
-              <div className='flex items-center justify-between rounded-lg border p-4'>
-                <div>
-                  <p className='font-medium'>IRRF</p>
-                  <p className='text-sm text-muted-foreground'>
-                    Imposto de Renda Retido na Fonte
-                  </p>
-                </div>
-                <div className='text-right'>
-                  <p className='font-medium'>20/05/2023</p>
-                  <p className='text-sm text-muted-foreground'>
-                    Vencimento em 5 dias
-                  </p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button variant='outline' className='w-full'>
-              Ver Calendário Completo
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
 
-      <TaxDetailsModal
-        isOpen={showDetailsModal}
-        onClose={() => setShowDetailsModal(false)}
-        taxResult={taxResult}
-        taxRegime={taxRegime}
-        activity={activity}
-        annex={annex}
-        revenue={revenue}
-        expenses={expenses}
-        period={period}
-      />
-    </div>
+                <Separator />
+
+                <div className='space-y-4'>
+                  {Object.entries(taxResult.breakdown).map(([key, value]) => {
+                    if (typeof value !== 'number') return null
+
+                    let label = ''
+                    switch (key) {
+                      case 'irpj':
+                        label = 'IRPJ'
+                        break
+                      case 'csll':
+                        label = 'CSLL'
+                        break
+                      case 'pis':
+                        label = 'PIS'
+                        break
+                      case 'cofins':
+                        label = 'COFINS'
+                        break
+                      case 'iss':
+                        label = 'ISS'
+                        break
+                      case 'icms':
+                        label = 'ICMS'
+                        break
+                      case 'ipi':
+                        label = 'IPI'
+                        break
+                      case 'cpp':
+                        label = 'CPP'
+                        break
+                      case 'fixedFee':
+                        label = 'Taxa Fixa'
+                        break
+                      case 'municipalTax':
+                        label =
+                          activity === 'services' || activity === 'transport'
+                            ? 'ISS'
+                            : 'ICMS'
+                        break
+                      default:
+                        label = key.toUpperCase()
+                    }
+
+                    return (
+                      <div key={key} className='flex justify-between'>
+                        <span>{label}</span>
+                        <span>{formatCurrency(value)}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <div className='h-64'>
+                  <TaxResultsChart
+                    results={{
+                      incomeTax: taxResult.breakdown.irpj || 0,
+                      socialSecurity: taxResult.breakdown.csll || 0,
+                      municipalTax:
+                        taxResult.breakdown.iss ||
+                        taxResult.breakdown.icms ||
+                        0,
+                      otherTaxes:
+                        (taxResult.breakdown.pis || 0) +
+                        (taxResult.breakdown.cofins || 0) +
+                        (taxResult.breakdown.cpp || 0) +
+                        (taxResult.breakdown.ipi || 0),
+                      totalTax: taxResult.totalTax,
+                      effectiveRate: taxResult.effectiveRate,
+                    }}
+                  />
+                </div>
+
+                <div className='flex flex-wrap gap-2'>
+                  <Button
+                    variant='outline'
+                    onClick={handleShowDetails}
+                    className='flex-1'
+                  >
+                    Ver Detalhes
+                  </Button>
+                  <Button variant='outline' className='flex-1'>
+                    Comparar Regimes
+                  </Button>
+                  <Button className='flex-1'>Exportar Cálculo</Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        <div className='mt-8'>
+          <Card>
+            <CardHeader>
+              <CardTitle>Calendário Fiscal</CardTitle>
+              <CardDescription>
+                Próximos vencimentos de impostos e obrigações fiscais
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className='space-y-4'>
+                <div className='flex items-center justify-between rounded-lg border p-4'>
+                  <div>
+                    <p className='font-medium'>Simples Nacional</p>
+                    <p className='text-sm text-muted-foreground'>
+                      DAS - Documento de Arrecadação do Simples
+                    </p>
+                  </div>
+                  <div className='text-right'>
+                    <p className='font-medium'>20/05/2023</p>
+                    <p className='text-sm text-muted-foreground'>
+                      Vencimento em 5 dias
+                    </p>
+                  </div>
+                </div>
+                <div className='flex items-center justify-between rounded-lg border p-4'>
+                  <div>
+                    <p className='font-medium'>INSS</p>
+                    <p className='text-sm text-muted-foreground'>
+                      Contribuição Previdenciária
+                    </p>
+                  </div>
+                  <div className='text-right'>
+                    <p className='font-medium'>15/05/2023</p>
+                    <p className='text-sm text-muted-foreground'>
+                      Vencido há 0 dias
+                    </p>
+                  </div>
+                </div>
+                <div className='flex items-center justify-between rounded-lg border p-4'>
+                  <div>
+                    <p className='font-medium'>IRRF</p>
+                    <p className='text-sm text-muted-foreground'>
+                      Imposto de Renda Retido na Fonte
+                    </p>
+                  </div>
+                  <div className='text-right'>
+                    <p className='font-medium'>20/05/2023</p>
+                    <p className='text-sm text-muted-foreground'>
+                      Vencimento em 5 dias
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button variant='outline' className='w-full'>
+                Ver Calendário Completo
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+
+        <TaxDetailsModal
+          isOpen={showDetailsModal}
+          onClose={() => setShowDetailsModal(false)}
+          taxResult={taxResult}
+          taxRegime={taxRegime}
+          activity={activity}
+          annex={annex}
+          revenue={revenue}
+          expenses={expenses}
+          period={period}
+        />
+      </div>
+    </DevelopmentProvider>
   )
 }
 

@@ -47,14 +47,6 @@ export function DeleteConfirmationModal({
             <AlertTriangle className='h-5 w-5' />
             {title}
           </DialogTitle>
-          <Button
-            variant='ghost'
-            size='icon'
-            className='absolute right-4 top-4'
-            onClick={onClose}
-          >
-            <X className='h-4 w-4' />
-          </Button>
         </DialogHeader>
 
         <div className='py-4'>
@@ -86,3 +78,4 @@ export function DeleteConfirmationModal({
     </Dialog>
   )
 }
+

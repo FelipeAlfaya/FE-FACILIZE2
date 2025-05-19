@@ -38,6 +38,7 @@ type ValueFormatter = (
 ) => string
 import { Info, ArrowRight, Download } from 'lucide-react'
 import { FinancialNavigation } from '../tax-calculator/components/financial-navigation'
+import { DevelopmentProvider } from '@/context/DevelopmentContext'
 
 interface TaxBreakdown {
   [key: string]: number | boolean | undefined
@@ -458,418 +459,437 @@ export default function TaxRegimeComparison() {
   }, [activity])
 
   return (
-    <div className='container mx-auto p-6'>
-      <FinancialNavigation />
+    <DevelopmentProvider isDevelopment={true}>
+      <div className='container mx-auto p-6'>
+        <FinancialNavigation />
 
-      <div className='grid gap-6 md:grid-cols-2'>
-        <Card>
-          <CardHeader>
-            <CardTitle>Comparativo de Regimes Tributários</CardTitle>
-            <CardDescription>
-              Compare os impostos entre diferentes regimes tributários para sua
-              empresa
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs
-              defaultValue={period}
-              className='mb-6'
-              onValueChange={(value: string) => setPeriod(value as PeriodType)}
-            >
-              <TabsList className='grid w-full grid-cols-2'>
-                <TabsTrigger value='monthly'>Mensal</TabsTrigger>
-                <TabsTrigger value='yearly'>Anual</TabsTrigger>
-              </TabsList>
-              <TabsContent value='monthly' className='mt-4 space-y-4'>
-                <div className='space-y-2'>
-                  <Label htmlFor='activity'>Atividade Principal</Label>
-                  <Select
-                    value={activity}
-                    onValueChange={(value: ActivityType) => setActivity(value)}
-                  >
-                    <SelectTrigger id='activity'>
-                      <SelectValue placeholder='Selecione a atividade principal' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='services'>
-                        Prestação de Serviços
-                      </SelectItem>
-                      <SelectItem value='commerce'>Comércio</SelectItem>
-                      <SelectItem value='industry'>Indústria</SelectItem>
-                      <SelectItem value='transport'>Transporte</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {activity === 'services' && (
-                  <div className='space-y-2'>
-                    <Label htmlFor='simples-annex'>
-                      Anexo do Simples Nacional
-                    </Label>
-                    <Select
-                      value={annex}
-                      onValueChange={(value: AnnexType) => setAnnex(value)}
-                    >
-                      <SelectTrigger id='simples-annex'>
-                        <SelectValue placeholder='Selecione o anexo do Simples' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value='3'>
-                          Anexo III - Serviços em geral
-                        </SelectItem>
-                        <SelectItem value='4'>
-                          Anexo IV - Serviços específicos
-                        </SelectItem>
-                        <SelectItem value='5'>
-                          Anexo V - Serviços técnicos
-                        </SelectItem>
-                        <SelectItem value='6'>
-                          Anexo VI - Serviços profissionais
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                <div className='space-y-2'>
-                  <Label htmlFor='revenue'>Faturamento Mensal (R$)</Label>
-                  <Input
-                    id='revenue'
-                    type='number'
-                    value={revenue}
-                    onChange={(e) => setRevenue(Number(e.target.value))}
-                    placeholder='0,00'
-                  />
-                </div>
-
-                <div className='space-y-2'>
-                  <Label htmlFor='expenses'>Despesas Mensais (R$)</Label>
-                  <Input
-                    id='expenses'
-                    type='number'
-                    value={expenses}
-                    onChange={(e) => setExpenses(Number(e.target.value))}
-                    placeholder='0,00'
-                  />
-                </div>
-              </TabsContent>
-              <TabsContent value='yearly' className='mt-4 space-y-4'>
-                <div className='space-y-2'>
-                  <Label htmlFor='activity-yearly'>Atividade Principal</Label>
-                  <Select
-                    value={activity}
-                    onValueChange={(value: ActivityType) => setActivity(value)}
-                  >
-                    <SelectTrigger id='activity-yearly'>
-                      <SelectValue placeholder='Selecione a atividade principal' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='services'>
-                        Prestação de Serviços
-                      </SelectItem>
-                      <SelectItem value='commerce'>Comércio</SelectItem>
-                      <SelectItem value='industry'>Indústria</SelectItem>
-                      <SelectItem value='transport'>Transporte</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {activity === 'services' && (
-                  <div className='space-y-2'>
-                    <Label htmlFor='simples-annex-yearly'>
-                      Anexo do Simples Nacional
-                    </Label>
-                    <Select
-                      value={annex}
-                      onValueChange={(value: AnnexType) => setAnnex(value)}
-                    >
-                      <SelectTrigger id='simples-annex-yearly'>
-                        <SelectValue placeholder='Selecione o anexo do Simples' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value='3'>
-                          Anexo III - Serviços em geral
-                        </SelectItem>
-                        <SelectItem value='4'>
-                          Anexo IV - Serviços específicos
-                        </SelectItem>
-                        <SelectItem value='5'>
-                          Anexo V - Serviços técnicos
-                        </SelectItem>
-                        <SelectItem value='6'>
-                          Anexo VI - Serviços profissionais
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                <div className='space-y-2'>
-                  <Label htmlFor='revenue-yearly'>Faturamento Anual (R$)</Label>
-                  <Input
-                    id='revenue-yearly'
-                    type='number'
-                    value={period === 'yearly' ? revenue : revenue * 12}
-                    onChange={(e) => setRevenue(Number(e.target.value))}
-                    placeholder='0,00'
-                  />
-                </div>
-
-                <div className='space-y-2'>
-                  <Label htmlFor='expenses-yearly'>Despesas Anuais (R$)</Label>
-                  <Input
-                    id='expenses-yearly'
-                    type='number'
-                    value={period === 'yearly' ? expenses : expenses * 12}
-                    onChange={(e) => setExpenses(Number(e.target.value))}
-                    placeholder='0,00'
-                  />
-                </div>
-              </TabsContent>
-            </Tabs>
-
-            <Button onClick={calculateTaxes} className='w-full'>
-              Comparar Regimes Tributários
-            </Button>
-          </CardContent>
-        </Card>
-
-        {showResults && (
+        <div className='grid gap-6 md:grid-cols-2'>
           <Card>
             <CardHeader>
-              <CardTitle>Resultado da Comparação</CardTitle>
+              <CardTitle>Comparativo de Regimes Tributários</CardTitle>
               <CardDescription>
-                {activity === 'services'
-                  ? 'Prestação de Serviços'
-                  : activity === 'commerce'
-                  ? 'Comércio'
-                  : activity === 'industry'
-                  ? 'Indústria'
-                  : 'Transporte'}{' '}
-                | Faturamento:{' '}
-                {formatCurrency(period === 'monthly' ? revenue : revenue / 12)}{' '}
-                {period === 'monthly' ? 'mensal' : '/ mês'}
+                Compare os impostos entre diferentes regimes tributários para
+                sua empresa
               </CardDescription>
             </CardHeader>
-            <CardContent className='space-y-6'>
-              <div className='h-64'>
-                <ResponsiveContainer width='100%' height='100%'>
-                  <BarChart
-                    data={chartData}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray='3 3' />
-                    <XAxis dataKey='name' />
-                    <YAxis yAxisId='left' orientation='left' stroke='#82ca9d' />
-                    <YAxis
-                      yAxisId='right'
-                      orientation='right'
-                      stroke='#8884d8'
+            <CardContent>
+              <Tabs
+                defaultValue={period}
+                className='mb-6'
+                onValueChange={(value: string) =>
+                  setPeriod(value as PeriodType)
+                }
+              >
+                <TabsList className='grid w-full grid-cols-2'>
+                  <TabsTrigger value='monthly'>Mensal</TabsTrigger>
+                  <TabsTrigger value='yearly'>Anual</TabsTrigger>
+                </TabsList>
+                <TabsContent value='monthly' className='mt-4 space-y-4'>
+                  <div className='space-y-2'>
+                    <Label htmlFor='activity'>Atividade Principal</Label>
+                    <Select
+                      value={activity}
+                      onValueChange={(value: ActivityType) =>
+                        setActivity(value)
+                      }
+                    >
+                      <SelectTrigger id='activity'>
+                        <SelectValue placeholder='Selecione a atividade principal' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='services'>
+                          Prestação de Serviços
+                        </SelectItem>
+                        <SelectItem value='commerce'>Comércio</SelectItem>
+                        <SelectItem value='industry'>Indústria</SelectItem>
+                        <SelectItem value='transport'>Transporte</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {activity === 'services' && (
+                    <div className='space-y-2'>
+                      <Label htmlFor='simples-annex'>
+                        Anexo do Simples Nacional
+                      </Label>
+                      <Select
+                        value={annex}
+                        onValueChange={(value: AnnexType) => setAnnex(value)}
+                      >
+                        <SelectTrigger id='simples-annex'>
+                          <SelectValue placeholder='Selecione o anexo do Simples' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value='3'>
+                            Anexo III - Serviços em geral
+                          </SelectItem>
+                          <SelectItem value='4'>
+                            Anexo IV - Serviços específicos
+                          </SelectItem>
+                          <SelectItem value='5'>
+                            Anexo V - Serviços técnicos
+                          </SelectItem>
+                          <SelectItem value='6'>
+                            Anexo VI - Serviços profissionais
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  <div className='space-y-2'>
+                    <Label htmlFor='revenue'>Faturamento Mensal (R$)</Label>
+                    <Input
+                      id='revenue'
+                      type='number'
+                      value={revenue}
+                      onChange={(e) => setRevenue(Number(e.target.value))}
+                      placeholder='0,00'
                     />
-                    <Tooltip
-                      formatter={(value: number) => formatCurrency(value)}
+                  </div>
+
+                  <div className='space-y-2'>
+                    <Label htmlFor='expenses'>Despesas Mensais (R$)</Label>
+                    <Input
+                      id='expenses'
+                      type='number'
+                      value={expenses}
+                      onChange={(e) => setExpenses(Number(e.target.value))}
+                      placeholder='0,00'
                     />
-                    <Legend />
-                    <Bar
-                      yAxisId='left'
-                      dataKey='impostos'
-                      name='Total de Impostos'
-                      fill='#8884d8'
+                  </div>
+                </TabsContent>
+                <TabsContent value='yearly' className='mt-4 space-y-4'>
+                  <div className='space-y-2'>
+                    <Label htmlFor='activity-yearly'>Atividade Principal</Label>
+                    <Select
+                      value={activity}
+                      onValueChange={(value: ActivityType) =>
+                        setActivity(value)
+                      }
+                    >
+                      <SelectTrigger id='activity-yearly'>
+                        <SelectValue placeholder='Selecione a atividade principal' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='services'>
+                          Prestação de Serviços
+                        </SelectItem>
+                        <SelectItem value='commerce'>Comércio</SelectItem>
+                        <SelectItem value='industry'>Indústria</SelectItem>
+                        <SelectItem value='transport'>Transporte</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {activity === 'services' && (
+                    <div className='space-y-2'>
+                      <Label htmlFor='simples-annex-yearly'>
+                        Anexo do Simples Nacional
+                      </Label>
+                      <Select
+                        value={annex}
+                        onValueChange={(value: AnnexType) => setAnnex(value)}
+                      >
+                        <SelectTrigger id='simples-annex-yearly'>
+                          <SelectValue placeholder='Selecione o anexo do Simples' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value='3'>
+                            Anexo III - Serviços em geral
+                          </SelectItem>
+                          <SelectItem value='4'>
+                            Anexo IV - Serviços específicos
+                          </SelectItem>
+                          <SelectItem value='5'>
+                            Anexo V - Serviços técnicos
+                          </SelectItem>
+                          <SelectItem value='6'>
+                            Anexo VI - Serviços profissionais
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  <div className='space-y-2'>
+                    <Label htmlFor='revenue-yearly'>
+                      Faturamento Anual (R$)
+                    </Label>
+                    <Input
+                      id='revenue-yearly'
+                      type='number'
+                      value={period === 'yearly' ? revenue : revenue * 12}
+                      onChange={(e) => setRevenue(Number(e.target.value))}
+                      placeholder='0,00'
                     />
-                    <Bar
-                      yAxisId='left'
-                      dataKey='lucro'
-                      name='Lucro Líquido'
-                      fill='#82ca9d'
+                  </div>
+
+                  <div className='space-y-2'>
+                    <Label htmlFor='expenses-yearly'>
+                      Despesas Anuais (R$)
+                    </Label>
+                    <Input
+                      id='expenses-yearly'
+                      type='number'
+                      value={period === 'yearly' ? expenses : expenses * 12}
+                      onChange={(e) => setExpenses(Number(e.target.value))}
+                      placeholder='0,00'
                     />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
 
-              <div className='space-y-4'>
-                <div className='grid grid-cols-2 gap-4'>
-                  <Card
-                    className={
-                      taxResults.simples.netProfit >=
-                        taxResults.presumido.netProfit &&
-                      taxResults.simples.netProfit >=
-                        taxResults.real.netProfit &&
-                      taxResults.simples.netProfit >= taxResults.mei.netProfit
-                        ? 'border-green-500 border-2'
-                        : ''
-                    }
-                  >
-                    <CardHeader className='pb-2'>
-                      <CardTitle className='text-base'>
-                        Simples Nacional
-                      </CardTitle>
-                      <CardDescription>
-                        {taxResults.simples.breakdown.exceedsLimit
-                          ? 'Faturamento excede o limite!'
-                          : `Anexo ${annex} - Alíquota Efetiva: ${taxResults.simples.effectiveRate.toFixed(
-                              2
-                            )}%`}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className='space-y-1'>
-                        <div className='flex justify-between'>
-                          <span>Total de Impostos:</span>
-                          <span className='font-medium text-red-600'>
-                            {formatCurrency(taxResults.simples.totalTax)}
-                          </span>
-                        </div>
-                        <div className='flex justify-between'>
-                          <span>Lucro Líquido:</span>
-                          <span className='font-medium text-green-600'>
-                            {formatCurrency(taxResults.simples.netProfit)}
-                          </span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card
-                    className={
-                      taxResults.presumido.netProfit >=
-                        taxResults.simples.netProfit &&
-                      taxResults.presumido.netProfit >=
-                        taxResults.real.netProfit &&
-                      taxResults.presumido.netProfit >= taxResults.mei.netProfit
-                        ? 'border-green-500 border-2'
-                        : ''
-                    }
-                  >
-                    <CardHeader className='pb-2'>
-                      <CardTitle className='text-base'>
-                        Lucro Presumido
-                      </CardTitle>
-                      <CardDescription>
-                        Alíquota Efetiva:{' '}
-                        {taxResults.presumido.effectiveRate.toFixed(2)}%
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className='space-y-1'>
-                        <div className='flex justify-between'>
-                          <span>Total de Impostos:</span>
-                          <span className='font-medium text-red-600'>
-                            {formatCurrency(taxResults.presumido.totalTax)}
-                          </span>
-                        </div>
-                        <div className='flex justify-between'>
-                          <span>Lucro Líquido:</span>
-                          <span className='font-medium text-green-600'>
-                            {formatCurrency(taxResults.presumido.netProfit)}
-                          </span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card
-                    className={
-                      taxResults.real.netProfit >=
-                        taxResults.simples.netProfit &&
-                      taxResults.real.netProfit >=
-                        taxResults.presumido.netProfit &&
-                      taxResults.real.netProfit >= taxResults.mei.netProfit
-                        ? 'border-green-500 border-2'
-                        : ''
-                    }
-                  >
-                    <CardHeader className='pb-2'>
-                      <CardTitle className='text-base'>Lucro Real</CardTitle>
-                      <CardDescription>
-                        Alíquota Efetiva:{' '}
-                        {taxResults.real.effectiveRate.toFixed(2)}%
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className='space-y-1'>
-                        <div className='flex justify-between'>
-                          <span>Total de Impostos:</span>
-                          <span className='font-medium text-red-600'>
-                            {formatCurrency(taxResults.real.totalTax)}
-                          </span>
-                        </div>
-                        <div className='flex justify-between'>
-                          <span>Lucro Líquido:</span>
-                          <span className='font-medium text-green-600'>
-                            {formatCurrency(taxResults.real.netProfit)}
-                          </span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card
-                    className={
-                      taxResults.mei.netProfit >=
-                        taxResults.simples.netProfit &&
-                      taxResults.mei.netProfit >=
-                        taxResults.presumido.netProfit &&
-                      taxResults.mei.netProfit >= taxResults.real.netProfit
-                        ? 'border-green-500 border-2'
-                        : ''
-                    }
-                  >
-                    <CardHeader className='pb-2'>
-                      <CardTitle className='text-base'>MEI</CardTitle>
-                      <CardDescription>
-                        {taxResults.mei.breakdown.exceedsLimit
-                          ? 'Faturamento excede o limite!'
-                          : `Taxa Fixa: ${formatCurrency(
-                              meiValues.monthlyFee
-                            )}`}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className='space-y-1'>
-                        <div className='flex justify-between'>
-                          <span>Total de Impostos:</span>
-                          <span className='font-medium text-red-600'>
-                            {formatCurrency(taxResults.mei.totalTax)}
-                          </span>
-                        </div>
-                        <div className='flex justify-between'>
-                          <span>Lucro Líquido:</span>
-                          <span className='font-medium text-green-600'>
-                            {formatCurrency(taxResults.mei.netProfit)}
-                          </span>
-                        </div>
-                      </div>
-                      {taxResults.mei.breakdown.exceedsLimit && (
-                        <div className='text-xs text-red-500 mt-2 flex items-center'>
-                          <Info className='w-4 h-4 mr-1' />
-                          Limite MEI ultrapassado - Considere migrar para outro
-                          regime
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
-
-                <div className='text-sm text-muted-foreground flex items-center'>
-                  <Info className='w-4 h-4 mr-2' />
-                  Valores estimados - Consulte um contador para análise
-                  detalhada
-                </div>
-              </div>
+              <Button onClick={calculateTaxes} className='w-full'>
+                Comparar Regimes Tributários
+              </Button>
             </CardContent>
-            <CardFooter className='flex justify-between'>
-              <Button variant='outline'>
-                <Download className='w-4 h-4 mr-2' />
-                Exportar Dados
-              </Button>
-              <Button>
-                Simular Opções <ArrowRight className='w-4 h-4 ml-2' />
-              </Button>
-            </CardFooter>
           </Card>
-        )}
+
+          {showResults && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Resultado da Comparação</CardTitle>
+                <CardDescription>
+                  {activity === 'services'
+                    ? 'Prestação de Serviços'
+                    : activity === 'commerce'
+                    ? 'Comércio'
+                    : activity === 'industry'
+                    ? 'Indústria'
+                    : 'Transporte'}{' '}
+                  | Faturamento:{' '}
+                  {formatCurrency(
+                    period === 'monthly' ? revenue : revenue / 12
+                  )}{' '}
+                  {period === 'monthly' ? 'mensal' : '/ mês'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className='space-y-6'>
+                <div className='h-64'>
+                  <ResponsiveContainer width='100%' height='100%'>
+                    <BarChart
+                      data={chartData}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray='3 3' />
+                      <XAxis dataKey='name' />
+                      <YAxis
+                        yAxisId='left'
+                        orientation='left'
+                        stroke='#82ca9d'
+                      />
+                      <YAxis
+                        yAxisId='right'
+                        orientation='right'
+                        stroke='#8884d8'
+                      />
+                      <Tooltip
+                        formatter={(value: number) => formatCurrency(value)}
+                      />
+                      <Legend />
+                      <Bar
+                        yAxisId='left'
+                        dataKey='impostos'
+                        name='Total de Impostos'
+                        fill='#8884d8'
+                      />
+                      <Bar
+                        yAxisId='left'
+                        dataKey='lucro'
+                        name='Lucro Líquido'
+                        fill='#82ca9d'
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className='space-y-4'>
+                  <div className='grid grid-cols-2 gap-4'>
+                    <Card
+                      className={
+                        taxResults.simples.netProfit >=
+                          taxResults.presumido.netProfit &&
+                        taxResults.simples.netProfit >=
+                          taxResults.real.netProfit &&
+                        taxResults.simples.netProfit >= taxResults.mei.netProfit
+                          ? 'border-green-500 border-2'
+                          : ''
+                      }
+                    >
+                      <CardHeader className='pb-2'>
+                        <CardTitle className='text-base'>
+                          Simples Nacional
+                        </CardTitle>
+                        <CardDescription>
+                          {taxResults.simples.breakdown.exceedsLimit
+                            ? 'Faturamento excede o limite!'
+                            : `Anexo ${annex} - Alíquota Efetiva: ${taxResults.simples.effectiveRate.toFixed(
+                                2
+                              )}%`}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className='space-y-1'>
+                          <div className='flex justify-between'>
+                            <span>Total de Impostos:</span>
+                            <span className='font-medium text-red-600'>
+                              {formatCurrency(taxResults.simples.totalTax)}
+                            </span>
+                          </div>
+                          <div className='flex justify-between'>
+                            <span>Lucro Líquido:</span>
+                            <span className='font-medium text-green-600'>
+                              {formatCurrency(taxResults.simples.netProfit)}
+                            </span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card
+                      className={
+                        taxResults.presumido.netProfit >=
+                          taxResults.simples.netProfit &&
+                        taxResults.presumido.netProfit >=
+                          taxResults.real.netProfit &&
+                        taxResults.presumido.netProfit >=
+                          taxResults.mei.netProfit
+                          ? 'border-green-500 border-2'
+                          : ''
+                      }
+                    >
+                      <CardHeader className='pb-2'>
+                        <CardTitle className='text-base'>
+                          Lucro Presumido
+                        </CardTitle>
+                        <CardDescription>
+                          Alíquota Efetiva:{' '}
+                          {taxResults.presumido.effectiveRate.toFixed(2)}%
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className='space-y-1'>
+                          <div className='flex justify-between'>
+                            <span>Total de Impostos:</span>
+                            <span className='font-medium text-red-600'>
+                              {formatCurrency(taxResults.presumido.totalTax)}
+                            </span>
+                          </div>
+                          <div className='flex justify-between'>
+                            <span>Lucro Líquido:</span>
+                            <span className='font-medium text-green-600'>
+                              {formatCurrency(taxResults.presumido.netProfit)}
+                            </span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card
+                      className={
+                        taxResults.real.netProfit >=
+                          taxResults.simples.netProfit &&
+                        taxResults.real.netProfit >=
+                          taxResults.presumido.netProfit &&
+                        taxResults.real.netProfit >= taxResults.mei.netProfit
+                          ? 'border-green-500 border-2'
+                          : ''
+                      }
+                    >
+                      <CardHeader className='pb-2'>
+                        <CardTitle className='text-base'>Lucro Real</CardTitle>
+                        <CardDescription>
+                          Alíquota Efetiva:{' '}
+                          {taxResults.real.effectiveRate.toFixed(2)}%
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className='space-y-1'>
+                          <div className='flex justify-between'>
+                            <span>Total de Impostos:</span>
+                            <span className='font-medium text-red-600'>
+                              {formatCurrency(taxResults.real.totalTax)}
+                            </span>
+                          </div>
+                          <div className='flex justify-between'>
+                            <span>Lucro Líquido:</span>
+                            <span className='font-medium text-green-600'>
+                              {formatCurrency(taxResults.real.netProfit)}
+                            </span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card
+                      className={
+                        taxResults.mei.netProfit >=
+                          taxResults.simples.netProfit &&
+                        taxResults.mei.netProfit >=
+                          taxResults.presumido.netProfit &&
+                        taxResults.mei.netProfit >= taxResults.real.netProfit
+                          ? 'border-green-500 border-2'
+                          : ''
+                      }
+                    >
+                      <CardHeader className='pb-2'>
+                        <CardTitle className='text-base'>MEI</CardTitle>
+                        <CardDescription>
+                          {taxResults.mei.breakdown.exceedsLimit
+                            ? 'Faturamento excede o limite!'
+                            : `Taxa Fixa: ${formatCurrency(
+                                meiValues.monthlyFee
+                              )}`}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className='space-y-1'>
+                          <div className='flex justify-between'>
+                            <span>Total de Impostos:</span>
+                            <span className='font-medium text-red-600'>
+                              {formatCurrency(taxResults.mei.totalTax)}
+                            </span>
+                          </div>
+                          <div className='flex justify-between'>
+                            <span>Lucro Líquido:</span>
+                            <span className='font-medium text-green-600'>
+                              {formatCurrency(taxResults.mei.netProfit)}
+                            </span>
+                          </div>
+                        </div>
+                        {taxResults.mei.breakdown.exceedsLimit && (
+                          <div className='text-xs text-red-500 mt-2 flex items-center'>
+                            <Info className='w-4 h-4 mr-1' />
+                            Limite MEI ultrapassado - Considere migrar para
+                            outro regime
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  <div className='text-sm text-muted-foreground flex items-center'>
+                    <Info className='w-4 h-4 mr-2' />
+                    Valores estimados - Consulte um contador para análise
+                    detalhada
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter className='flex justify-between'>
+                <Button variant='outline'>
+                  <Download className='w-4 h-4 mr-2' />
+                  Exportar Dados
+                </Button>
+                <Button>
+                  Simular Opções <ArrowRight className='w-4 h-4 ml-2' />
+                </Button>
+              </CardFooter>
+            </Card>
+          )}
+        </div>
       </div>
-    </div>
+    </DevelopmentProvider>
   )
 }
 

@@ -7,5 +7,7 @@ export const metadata: Metadata = {
 }
 
 export default function TaxCalculatorPage() {
+  // const { isDevelopment } = useDevelopment()
   return <TaxCalculator />
 }
+
