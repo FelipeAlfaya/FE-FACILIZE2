@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { format } from 'date-fns'
+import { useState, useEffect, useCallback } from 'react'
+import { format, isSameDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Calendar } from '@/components/ui/calendar'
 import { Button } from '@/components/ui/button'
@@ -23,9 +23,9 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
-import { TimeInput } from './time-input'
+import { TimeInput } from '../../components/time-input'
+import { toast } from '@/components/ui/use-toast'
 
-// Days of the week
 const weekDays = [
   { value: '0', label: 'Domingo' },
   { value: '1', label: 'Segunda' },
@@ -48,11 +48,11 @@ interface DayAvailability {
 }
 
 interface WeeklyAvailability {
-  [key: string]: DayAvailability // key is day of week (0-6)
+  [key: string]: DayAvailability
 }
 
 interface SpecificDateAvailability {
-  [key: string]: TimeSlot[] // key is date in format YYYY-MM-DD
+  [key: string]: TimeSlot[]
 }
 
 interface AvailabilityManagerProps {
@@ -67,71 +67,115 @@ export function AvailabilityManager({
   const [isLoading, setIsLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('weekly')
   const [weeklyAvailability, setWeeklyAvailability] =
-    useState<WeeklyAvailability>({
-      '0': { enabled: false, timeSlots: [] },
-      '1': {
-        enabled: true,
-        timeSlots: [{ id: '1-1', start: '09:00', end: '17:00' }],
-      },
-      '2': {
-        enabled: true,
-        timeSlots: [{ id: '2-1', start: '09:00', end: '17:00' }],
-      },
-      '3': {
-        enabled: true,
-        timeSlots: [{ id: '3-1', start: '09:00', end: '17:00' }],
-      },
-      '4': {
-        enabled: true,
-        timeSlots: [{ id: '4-1', start: '09:00', end: '17:00' }],
-      },
-      '5': {
-        enabled: true,
-        timeSlots: [{ id: '5-1', start: '09:00', end: '17:00' }],
-      },
-      '6': { enabled: false, timeSlots: [] },
+    useState<WeeklyAvailability>(() => {
+      return weekDays.reduce((acc, day) => {
+        acc[day.value] = { enabled: false, timeSlots: [] }
+        return acc
+      }, {} as WeeklyAvailability)
     })
   const [specificDates, setSpecificDates] = useState<SpecificDateAvailability>(
     {}
   )
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
-  const [selectedDateStr, setSelectedDateStr] = useState<string>('')
+
+  const getDateKey = useCallback((date: Date | undefined): string => {
+    return date ? format(date, 'yyyy-MM-dd') : ''
+  }, [])
 
   useEffect(() => {
+    let mounted = true
+
     const fetchAvailability = async () => {
+      if (!providerId) return
+
       try {
-        // const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/providers/${providerId}/availability`)
-        // const data = await response.json()
-        // setWeeklyAvailability(data.weekly)
-        // setSpecificDates(data.specificDates)
+        setIsLoading(true)
+        const token =
+          localStorage.getItem('access_token') ||
+          sessionStorage.getItem('access_token')
+
+        console.log('Fetching availability for provider:', providerId)
+
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}appointments/provider/${providerId}/availability`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        )
+
+        if (!response.ok) {
+          throw new Error('Erro ao carregar disponibilidade')
+        }
+
+        const data = await response.json()
+        console.log('Availability data:', data)
+
+        if (!mounted) return
+
+        // Initialize weekly availability
+        const transformedWeekly = weekDays.reduce((acc, day) => {
+          acc[day.value] = {
+            enabled: false,
+            timeSlots: [],
+          }
+          return acc
+        }, {} as WeeklyAvailability)
+
+        // If we have available slots, populate them
+        if (Array.isArray(data)) {
+          data.forEach((slot: string) => {
+            // Assuming the slot comes in HH:mm format
+            const [hours] = slot.split(':')
+            const weekday = new Date().getDay().toString()
+
+            if (transformedWeekly[weekday]) {
+              transformedWeekly[weekday].enabled = true
+              transformedWeekly[weekday].timeSlots.push({
+                id: `${weekday}-${slot}`,
+                start: slot,
+                end: `${(parseInt(hours) + 1).toString().padStart(2, '0')}:00`, // Adding 1 hour as default duration
+              })
+            }
+          })
+        }
+
+        setWeeklyAvailability(transformedWeekly)
+        console.log('Transformed weekly availability:', transformedWeekly)
       } catch (error) {
         console.error('Error fetching availability:', error)
+        toast({
+          title: 'Erro',
+          description: 'Falha ao carregar disponibilidade',
+          variant: 'destructive',
+        })
+      } finally {
+        if (mounted) {
+          setIsLoading(false)
+        }
       }
     }
 
     fetchAvailability()
+
+    return () => {
+      mounted = false
+    }
   }, [providerId])
 
-  // Update selected date string when date changes
-  useEffect(() => {
-    if (selectedDate) {
-      setSelectedDateStr(format(selectedDate, 'yyyy-MM-dd'))
-    } else {
-      setSelectedDateStr('')
-    }
-  }, [selectedDate])
-
-  const handleDayToggle = (day: string, enabled: boolean) => {
+  const handleDayToggle = useCallback((day: string, enabled: boolean) => {
     setWeeklyAvailability((prev) => ({
       ...prev,
       [day]: {
         ...prev[day],
         enabled,
+        timeSlots: enabled ? prev[day]?.timeSlots || [] : [],
       },
     }))
-  }
+  }, [])
 
-  const addTimeSlot = (day: string) => {
+  const addTimeSlot = useCallback((day: string) => {
     const newId = `${day}-${Date.now()}`
     setWeeklyAvailability((prev) => ({
       ...prev,
@@ -143,26 +187,24 @@ export function AvailabilityManager({
         ],
       },
     }))
-  }
+  }, [])
 
-  const updateTimeSlot = (
-    day: string,
-    id: string,
-    field: 'start' | 'end',
-    value: string
-  ) => {
-    setWeeklyAvailability((prev) => ({
-      ...prev,
-      [day]: {
-        ...prev[day],
-        timeSlots: prev[day].timeSlots.map((slot) =>
-          slot.id === id ? { ...slot, [field]: value } : slot
-        ),
-      },
-    }))
-  }
+  const updateTimeSlot = useCallback(
+    (day: string, id: string, field: 'start' | 'end', value: string) => {
+      setWeeklyAvailability((prev) => ({
+        ...prev,
+        [day]: {
+          ...prev[day],
+          timeSlots: prev[day].timeSlots.map((slot) =>
+            slot.id === id ? { ...slot, [field]: value } : slot
+          ),
+        },
+      }))
+    },
+    []
+  )
 
-  const removeTimeSlot = (day: string, id: string) => {
+  const removeTimeSlot = useCallback((day: string, id: string) => {
     setWeeklyAvailability((prev) => ({
       ...prev,
       [day]: {
@@ -170,67 +212,108 @@ export function AvailabilityManager({
         timeSlots: prev[day].timeSlots.filter((slot) => slot.id !== id),
       },
     }))
-  }
+  }, [])
 
-  const addSpecificDateSlot = () => {
-    if (!selectedDateStr) return
+  const addSpecificDateSlot = useCallback(() => {
+    if (!selectedDate) return
+    const dateStr = getDateKey(selectedDate)
 
     setSpecificDates((prev) => ({
       ...prev,
-      [selectedDateStr]: [
-        ...(prev[selectedDateStr] || []),
+      [dateStr]: [
+        ...(prev[dateStr] || []),
         {
-          id: `${selectedDateStr}-${Date.now()}`,
+          id: `${dateStr}-${Date.now()}`,
           start: '09:00',
           end: '17:00',
         },
       ],
     }))
-  }
+  }, [selectedDate, getDateKey])
 
-  const updateSpecificDateSlot = (
-    date: string,
-    id: string,
-    field: 'start' | 'end',
-    value: string
-  ) => {
-    setSpecificDates((prev) => ({
-      ...prev,
-      [date]: prev[date].map((slot) =>
-        slot.id === id ? { ...slot, [field]: value } : slot
-      ),
-    }))
-  }
+  const updateSpecificDateSlot = useCallback(
+    (date: Date, id: string, field: 'start' | 'end', value: string) => {
+      const dateStr = getDateKey(date)
+      setSpecificDates((prev) => ({
+        ...prev,
+        [dateStr]:
+          prev[dateStr]?.map((slot) =>
+            slot.id === id ? { ...slot, [field]: value } : slot
+          ) || [],
+      }))
+    },
+    [getDateKey]
+  )
 
-  const removeSpecificDateSlot = (date: string, id: string) => {
-    setSpecificDates((prev) => ({
-      ...prev,
-      [date]: prev[date].filter((slot) => slot.id !== id),
-    }))
-  }
+  const removeSpecificDateSlot = useCallback(
+    (date: Date, id: string) => {
+      const dateStr = getDateKey(date)
+      setSpecificDates((prev) => ({
+        ...prev,
+        [dateStr]: prev[dateStr]?.filter((slot) => slot.id !== id) || [],
+      }))
+    },
+    [getDateKey]
+  )
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     setIsLoading(true)
 
     try {
-      // await fetch(`${process.env.NEXT_PUBLIC_API_URL}/providers/${providerId}/availability`, {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     weekly: weeklyAvailability,
-      //     specificDates
-      //   })
-      // })
+      const token =
+        localStorage.getItem('access_token') ||
+        sessionStorage.getItem('access_token')
+      const availabilities: any[] = []
 
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      Object.entries(weeklyAvailability).forEach(([weekday, dayData]) => {
+        if (dayData.enabled) {
+          dayData.timeSlots.forEach((slot) => {
+            availabilities.push({
+              weekday: parseInt(weekday),
+              startTime: slot.start,
+              endTime: slot.end,
+            })
+          })
+        }
+      })
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/appointments/availability`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            providerId: parseInt(providerId),
+            availabilities,
+            specificDates,
+          }),
+        }
+      )
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Erro ao salvar disponibilidade')
+      }
 
       if (onSave) onSave()
-    } catch (error) {
+      toast({
+        title: 'Sucesso',
+        description: 'Disponibilidade atualizada com sucesso!',
+      })
+    } catch (error: any) {
       console.error('Error saving availability:', error)
+      toast({
+        title: 'Erro',
+        description: error.message || 'Falha ao salvar disponibilidade',
+        variant: 'destructive',
+      })
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [weeklyAvailability, specificDates, providerId, onSave])
 
   return (
     <Card className='w-full'>
@@ -253,7 +336,7 @@ export function AvailabilityManager({
                 <div className='flex items-center justify-between mb-4'>
                   <div className='flex items-center space-x-2'>
                     <Switch
-                      checked={weeklyAvailability[day.value]?.enabled}
+                      checked={!!weeklyAvailability[day.value]?.enabled}
                       onCheckedChange={(checked) =>
                         handleDayToggle(day.value, checked)
                       }
@@ -337,7 +420,15 @@ export function AvailabilityManager({
                     <Calendar
                       mode='single'
                       selected={selectedDate}
-                      onSelect={setSelectedDate}
+                      onSelect={(date) => {
+                        if (
+                          date &&
+                          selectedDate &&
+                          isSameDay(date, selectedDate)
+                        )
+                          return
+                        setSelectedDate(date)
+                      }}
                       locale={ptBR}
                       disabled={(date) =>
                         date < new Date(new Date().setHours(0, 0, 0, 0))
@@ -348,12 +439,11 @@ export function AvailabilityManager({
               </div>
 
               <div className='w-full md:w-1/2'>
-                {selectedDateStr && (
+                {selectedDate && (
                   <div className='space-y-4'>
                     <div className='flex items-center justify-between'>
                       <Label>
-                        Horários para{' '}
-                        {selectedDate ? format(selectedDate, 'dd/MM/yyyy') : ''}
+                        Horários para {format(selectedDate, 'dd/MM/yyyy')}
                       </Label>
                       <Button
                         type='button'
@@ -366,7 +456,7 @@ export function AvailabilityManager({
                     </div>
 
                     <div className='space-y-2'>
-                      {specificDates[selectedDateStr]?.map((slot) => (
+                      {specificDates[getDateKey(selectedDate)]?.map((slot) => (
                         <div
                           key={slot.id}
                           className='flex items-center space-x-2'
@@ -375,7 +465,7 @@ export function AvailabilityManager({
                             value={slot.start}
                             onChange={(value) =>
                               updateSpecificDateSlot(
-                                selectedDateStr,
+                                selectedDate,
                                 slot.id,
                                 'start',
                                 value
@@ -387,7 +477,7 @@ export function AvailabilityManager({
                             value={slot.end}
                             onChange={(value) =>
                               updateSpecificDateSlot(
-                                selectedDateStr,
+                                selectedDate,
                                 slot.id,
                                 'end',
                                 value
@@ -399,7 +489,7 @@ export function AvailabilityManager({
                             variant='ghost'
                             size='icon'
                             onClick={() =>
-                              removeSpecificDateSlot(selectedDateStr, slot.id)
+                              removeSpecificDateSlot(selectedDate, slot.id)
                             }
                           >
                             <Trash2 className='h-4 w-4' />
@@ -407,8 +497,9 @@ export function AvailabilityManager({
                         </div>
                       ))}
 
-                      {(!specificDates[selectedDateStr] ||
-                        specificDates[selectedDateStr]?.length === 0) && (
+                      {(!specificDates[getDateKey(selectedDate)] ||
+                        specificDates[getDateKey(selectedDate)]?.length ===
+                          0) && (
                         <p className='text-sm text-muted-foreground'>
                           Nenhum horário configurado para esta data.
                         </p>
@@ -417,7 +508,7 @@ export function AvailabilityManager({
                   </div>
                 )}
 
-                {!selectedDateStr && (
+                {!selectedDate && (
                   <div className='h-full flex items-center justify-center'>
                     <p className='text-muted-foreground'>
                       Selecione uma data para configurar horários específicos.

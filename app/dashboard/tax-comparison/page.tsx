@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -12,7 +12,6 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Select,
   SelectContent,
@@ -20,17 +19,57 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Separator } from '@/components/ui/separator'
-import { TaxResultsChart } from './tax-results-chart'
-import { FinancialNavigation } from './financial-navigation'
-import { TaxDetailsModal } from './tax-details-modal'
-import { toast } from 'sonner'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts'
+type ValueFormatter = (
+  value: any,
+  name?: string,
+  entry?: any,
+  index?: number
+) => string
+import { Info, ArrowRight, Download } from 'lucide-react'
+import { FinancialNavigation } from '../tax-calculator/components/financial-navigation'
 
-export type ActivityType = 'services' | 'commerce' | 'industry' | 'transport'
-export type AnnexType = '1' | '2' | '3' | '4' | '5' | '6'
-export type PeriodType = 'monthly' | 'yearly'
+interface TaxBreakdown {
+  [key: string]: number | boolean | undefined
+  exceedsLimit?: boolean
+}
 
-export interface TaxBreakdown {
+interface TaxResult {
+  totalTax: number
+  effectiveRate: number
+  breakdown: TaxBreakdown
+  netProfit: number
+}
+
+interface TaxResults {
+  simples: TaxResult
+  presumido: TaxResult
+  real: TaxResult
+  mei: TaxResult
+}
+
+interface ChartDataItem {
+  name: string
+  impostos: number
+  lucro: number
+  aliquota: number
+}
+
+type ActivityType = 'services' | 'commerce' | 'industry' | 'transport'
+type PeriodType = 'monthly' | 'yearly'
+type AnnexType = '1' | '2' | '3' | '4' | '5' | '6'
+
+interface PresumedRates {
   irpj: number
   csll: number
   pis: number
@@ -38,29 +77,42 @@ export interface TaxBreakdown {
   iss?: number
   icms?: number
   ipi?: number
-  cpp?: number
-  fixedFee?: number
-  exceedsLimit?: boolean
-  municipalTax?: number
 }
 
-export interface TaxResult {
-  totalTax: number
-  effectiveRate: number
-  breakdown: TaxBreakdown
-  netProfit: number
+interface RealRates {
+  irpj: number
+  csll: number
+  pis: number
+  cofins: number
+  iss: number
+  icms: number
 }
 
-export function TaxCalculator() {
-  const [taxRegime, setTaxRegime] = useState('simples')
-  const [revenue, setRevenue] = useState('10000')
-  const [expenses, setExpenses] = useState('3000')
+interface MeiValues {
+  monthlyFee: number
+  revenueLimit: number
+  hasLimit: boolean
+}
+
+export default function TaxRegimeComparison() {
+  // Estados para os inputs do usuário
+  const [revenue, setRevenue] = useState<number>(10000)
+  const [expenses, setExpenses] = useState<number>(3000)
   const [activity, setActivity] = useState<ActivityType>('services')
   const [annex, setAnnex] = useState<AnnexType>('3')
+  const [showResults, setShowResults] = useState<boolean>(false)
   const [period, setPeriod] = useState<PeriodType>('monthly')
-  const [showResults, setShowResults] = useState(false)
-  const [showDetailsModal, setShowDetailsModal] = useState(false)
-  const [taxResult, setTaxResult] = useState<TaxResult | null>(null)
+
+  // Estados para armazenar resultados dos cálculos
+  const [taxResults, setTaxResults] = useState<TaxResults>({
+    simples: { totalTax: 0, effectiveRate: 0, breakdown: {}, netProfit: 0 },
+    presumido: { totalTax: 0, effectiveRate: 0, breakdown: {}, netProfit: 0 },
+    real: { totalTax: 0, effectiveRate: 0, breakdown: {}, netProfit: 0 },
+    mei: { totalTax: 0, effectiveRate: 0, breakdown: {}, netProfit: 0 },
+  })
+
+  // Dados para o gráfico de comparação
+  const [chartData, setChartData] = useState<ChartDataItem[]>([])
 
   // Anexos do Simples Nacional e suas alíquotas
   const simplesTotals: Record<AnnexType, number[]> = {
@@ -93,7 +145,7 @@ export function TaxCalculator() {
   }
 
   // Alíquotas e base de cálculo do Lucro Presumido
-  const presumedRates: Record<ActivityType, TaxBreakdown> = {
+  const presumedRates: Record<ActivityType, PresumedRates> = {
     services: { irpj: 0.32, csll: 0.32, pis: 0.0065, cofins: 0.03, iss: 0.05 },
     commerce: { irpj: 0.08, csll: 0.12, pis: 0.0065, cofins: 0.03, icms: 0.18 },
     industry: {
@@ -108,17 +160,18 @@ export function TaxCalculator() {
   }
 
   // Alíquotas para Lucro Real
-  const realRates: TaxBreakdown = {
+  const realRates: RealRates = {
     irpj: 0.15, // 15% sobre o lucro
     csll: 0.09, // 9% sobre o lucro
     pis: 0.0165, // 1,65% sobre o faturamento (não-cumulativo)
     cofins: 0.076, // 7,6% sobre o faturamento (não-cumulativo)
+    // ISS/ICMS varia conforme atividade
     iss: 0.05,
     icms: 0.18,
   }
 
   // Valores para MEI
-  const meiValues = {
+  const meiValues: MeiValues = {
     monthlyFee: 71.0, // INSS + ISS/ICMS básico - valor atualizado 2025
     revenueLimit: 8333.33, // Limite mensal MEI (100k anual)
     hasLimit: true,
@@ -132,10 +185,6 @@ export function TaxCalculator() {
       }
     }
     return 5 // última faixa
-  }
-
-  const handleShowDetails = () => {
-    toast.success('Modal de detalhes aberto')
   }
 
   // Calcula o adicional de IRPJ (para Lucro Real e Presumido quando aplicável)
@@ -154,13 +203,7 @@ export function TaxCalculator() {
       return {
         totalTax: 0,
         effectiveRate: 0,
-        breakdown: {
-          irpj: 0,
-          csll: 0,
-          pis: 0,
-          cofins: 0,
-          exceedsLimit: true,
-        },
+        breakdown: { exceedsLimit: true },
         netProfit: 0,
       }
     }
@@ -175,12 +218,7 @@ export function TaxCalculator() {
     const totalTax = monthlyRevenue * effectiveRate
 
     // Cálculo aproximado da distribuição de impostos no Simples
-    let breakdown: TaxBreakdown = {
-      irpj: 0,
-      csll: 0,
-      pis: 0,
-      cofins: 0,
-    }
+    let breakdown: TaxBreakdown = {}
 
     if (annex === '3' || annex === '4' || annex === '5' || annex === '6') {
       // Serviços
@@ -284,9 +322,9 @@ export function TaxCalculator() {
     // Impostos municipais/estaduais
     let municipalTax = 0
     if (activityType === 'services' || activityType === 'transport') {
-      municipalTax = monthlyRevenue * (realRates.iss ?? 0) // ISS
+      municipalTax = monthlyRevenue * realRates.iss // ISS
     } else {
-      municipalTax = monthlyRevenue * (realRates.icms ?? 0) // ICMS
+      municipalTax = monthlyRevenue * realRates.icms // ICMS
     }
 
     const totalTax = irpj + irpjAdd + csll + pis + cofins + municipalTax
@@ -316,10 +354,6 @@ export function TaxCalculator() {
         totalTax: meiValues.monthlyFee,
         effectiveRate: (meiValues.monthlyFee / monthlyRevenue) * 100,
         breakdown: {
-          irpj: 0,
-          csll: 0,
-          pis: 0,
-          cofins: 0,
           fixedFee: meiValues.monthlyFee,
           exceedsLimit: true,
         },
@@ -331,19 +365,14 @@ export function TaxCalculator() {
     return {
       totalTax: meiValues.monthlyFee,
       effectiveRate: (meiValues.monthlyFee / monthlyRevenue) * 100,
-      breakdown: {
-        irpj: 0,
-        csll: 0,
-        pis: 0,
-        cofins: 0,
-        fixedFee: meiValues.monthlyFee,
-      },
+      breakdown: { fixedFee: meiValues.monthlyFee },
       netProfit:
         monthlyRevenue - meiValues.monthlyFee - Number(monthlyExpenses),
     }
   }
 
-  const handleCalculate = () => {
+  // Função principal de cálculo
+  const calculateTaxes = (): void => {
     const monthlyRevenueValue = Number(revenue)
     const annualRevenueValue =
       period === 'monthly' ? monthlyRevenueValue * 12 : monthlyRevenueValue
@@ -354,47 +383,65 @@ export function TaxCalculator() {
     const expensesCalculation =
       period === 'monthly' ? monthlyExpensesValue : monthlyExpensesValue / 12
 
-    let result: TaxResult
+    // Calcular impostos para cada regime
+    const simplesResult = calculateSimples(
+      monthlyRevenueCalculation,
+      annualRevenueValue
+    )
+    const presumidoResult = calculatePresumed(
+      monthlyRevenueCalculation,
+      activity,
+      expensesCalculation
+    )
+    const realResult = calculateReal(
+      monthlyRevenueCalculation,
+      activity,
+      expensesCalculation
+    )
+    const meiResult = calculateMEI(
+      monthlyRevenueCalculation,
+      expensesCalculation
+    )
 
-    switch (taxRegime) {
-      case 'simples':
-        result = calculateSimples(monthlyRevenueCalculation, annualRevenueValue)
-        break
-      case 'presumido':
-        result = calculatePresumed(
-          monthlyRevenueCalculation,
-          activity,
-          expensesCalculation
-        )
-        break
-      case 'real':
-        result = calculateReal(
-          monthlyRevenueCalculation,
-          activity,
-          expensesCalculation
-        )
-        break
-      case 'mei':
-        result = calculateMEI(monthlyRevenueCalculation, expensesCalculation)
-        break
-      default:
-        result = {
-          totalTax: 0,
-          effectiveRate: 0,
-          breakdown: {
-            irpj: 0,
-            csll: 0,
-            pis: 0,
-            cofins: 0,
-          },
-          netProfit: 0,
-        }
-    }
+    setTaxResults({
+      simples: simplesResult,
+      presumido: presumidoResult,
+      real: realResult,
+      mei: meiResult,
+    })
 
-    setTaxResult(result)
+    // Atualizar dados do gráfico
+    setChartData([
+      {
+        name: 'Simples Nacional',
+        impostos: simplesResult.totalTax,
+        lucro: simplesResult.netProfit,
+        aliquota: simplesResult.effectiveRate,
+      },
+      {
+        name: 'Lucro Presumido',
+        impostos: presumidoResult.totalTax,
+        lucro: presumidoResult.netProfit,
+        aliquota: presumidoResult.effectiveRate,
+      },
+      {
+        name: 'Lucro Real',
+        impostos: realResult.totalTax,
+        lucro: realResult.netProfit,
+        aliquota: realResult.effectiveRate,
+      },
+      {
+        name: 'MEI',
+        impostos: meiResult.totalTax,
+        lucro: meiResult.netProfit,
+        aliquota: meiResult.effectiveRate,
+      },
+    ])
+
     setShowResults(true)
   }
 
+  // Formatar valores monetários
   const formatCurrency = (value: number): string => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -417,10 +464,10 @@ export function TaxCalculator() {
       <div className='grid gap-6 md:grid-cols-2'>
         <Card>
           <CardHeader>
-            <CardTitle>Calculadora de Impostos</CardTitle>
+            <CardTitle>Comparativo de Regimes Tributários</CardTitle>
             <CardDescription>
-              Calcule os impostos devidos com base no regime tributário e
-              faturamento
+              Compare os impostos entre diferentes regimes tributários para sua
+              empresa
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -434,21 +481,6 @@ export function TaxCalculator() {
                 <TabsTrigger value='yearly'>Anual</TabsTrigger>
               </TabsList>
               <TabsContent value='monthly' className='mt-4 space-y-4'>
-                <div className='space-y-2'>
-                  <Label htmlFor='tax-regime'>Regime Tributário</Label>
-                  <Select value={taxRegime} onValueChange={setTaxRegime}>
-                    <SelectTrigger id='tax-regime'>
-                      <SelectValue placeholder='Selecione o regime tributário' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='simples'>Simples Nacional</SelectItem>
-                      <SelectItem value='presumido'>Lucro Presumido</SelectItem>
-                      <SelectItem value='real'>Lucro Real</SelectItem>
-                      <SelectItem value='mei'>MEI</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
                 <div className='space-y-2'>
                   <Label htmlFor='activity'>Atividade Principal</Label>
                   <Select
@@ -469,7 +501,7 @@ export function TaxCalculator() {
                   </Select>
                 </div>
 
-                {taxRegime === 'simples' && activity === 'services' && (
+                {activity === 'services' && (
                   <div className='space-y-2'>
                     <Label htmlFor='simples-annex'>
                       Anexo do Simples Nacional
@@ -505,7 +537,7 @@ export function TaxCalculator() {
                     id='revenue'
                     type='number'
                     value={revenue}
-                    onChange={(e) => setRevenue(e.target.value)}
+                    onChange={(e) => setRevenue(Number(e.target.value))}
                     placeholder='0,00'
                   />
                 </div>
@@ -516,27 +548,12 @@ export function TaxCalculator() {
                     id='expenses'
                     type='number'
                     value={expenses}
-                    onChange={(e) => setExpenses(e.target.value)}
+                    onChange={(e) => setExpenses(Number(e.target.value))}
                     placeholder='0,00'
                   />
                 </div>
               </TabsContent>
               <TabsContent value='yearly' className='mt-4 space-y-4'>
-                <div className='space-y-2'>
-                  <Label htmlFor='tax-regime-yearly'>Regime Tributário</Label>
-                  <Select value={taxRegime} onValueChange={setTaxRegime}>
-                    <SelectTrigger id='tax-regime-yearly'>
-                      <SelectValue placeholder='Selecione o regime tributário' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='simples'>Simples Nacional</SelectItem>
-                      <SelectItem value='presumido'>Lucro Presumido</SelectItem>
-                      <SelectItem value='real'>Lucro Real</SelectItem>
-                      <SelectItem value='mei'>MEI</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
                 <div className='space-y-2'>
                   <Label htmlFor='activity-yearly'>Atividade Principal</Label>
                   <Select
@@ -557,7 +574,7 @@ export function TaxCalculator() {
                   </Select>
                 </div>
 
-                {taxRegime === 'simples' && activity === 'services' && (
+                {activity === 'services' && (
                   <div className='space-y-2'>
                     <Label htmlFor='simples-annex-yearly'>
                       Anexo do Simples Nacional
@@ -592,18 +609,8 @@ export function TaxCalculator() {
                   <Input
                     id='revenue-yearly'
                     type='number'
-                    value={
-                      period === 'yearly'
-                        ? revenue
-                        : (Number.parseFloat(revenue) * 12).toString()
-                    }
-                    onChange={(e) =>
-                      setRevenue(
-                        period === 'yearly'
-                          ? e.target.value
-                          : (Number.parseFloat(e.target.value) / 12).toString()
-                      )
-                    }
+                    value={period === 'yearly' ? revenue : revenue * 12}
+                    onChange={(e) => setRevenue(Number(e.target.value))}
                     placeholder='0,00'
                   />
                 </div>
@@ -613,237 +620,255 @@ export function TaxCalculator() {
                   <Input
                     id='expenses-yearly'
                     type='number'
-                    value={
-                      period === 'yearly'
-                        ? expenses
-                        : (Number.parseFloat(expenses) * 12).toString()
-                    }
-                    onChange={(e) =>
-                      setExpenses(
-                        period === 'yearly'
-                          ? e.target.value
-                          : (Number.parseFloat(e.target.value) / 12).toString()
-                      )
-                    }
+                    value={period === 'yearly' ? expenses : expenses * 12}
+                    onChange={(e) => setExpenses(Number(e.target.value))}
                     placeholder='0,00'
                   />
                 </div>
               </TabsContent>
             </Tabs>
 
-            <Button onClick={handleCalculate} className='w-full'>
-              Calcular Impostos
+            <Button onClick={calculateTaxes} className='w-full'>
+              Comparar Regimes Tributários
             </Button>
           </CardContent>
         </Card>
 
-        {showResults && taxResult && (
+        {showResults && (
           <Card>
             <CardHeader>
-              <CardTitle>Resultado do Cálculo</CardTitle>
+              <CardTitle>Resultado da Comparação</CardTitle>
               <CardDescription>
-                {taxRegime === 'simples'
-                  ? 'Simples Nacional'
-                  : taxRegime === 'presumido'
-                  ? 'Lucro Presumido'
-                  : taxRegime === 'real'
-                  ? 'Lucro Real'
-                  : 'MEI'}
-                {' - '}
                 {activity === 'services'
                   ? 'Prestação de Serviços'
                   : activity === 'commerce'
                   ? 'Comércio'
                   : activity === 'industry'
                   ? 'Indústria'
-                  : 'Transporte'}
+                  : 'Transporte'}{' '}
+                | Faturamento:{' '}
+                {formatCurrency(period === 'monthly' ? revenue : revenue / 12)}{' '}
+                {period === 'monthly' ? 'mensal' : '/ mês'}
               </CardDescription>
             </CardHeader>
             <CardContent className='space-y-6'>
-              <div className='grid gap-4 md:grid-cols-2'>
-                <div className='space-y-2'>
-                  <p className='text-sm text-muted-foreground'>Faturamento</p>
-                  <p className='text-2xl font-bold'>
-                    {formatCurrency(
-                      period === 'monthly'
-                        ? Number(revenue)
-                        : Number(revenue) / 12
-                    )}
-                  </p>
-                </div>
-                <div className='space-y-2'>
-                  <p className='text-sm text-muted-foreground'>
-                    Total de Impostos
-                  </p>
-                  <p className='text-2xl font-bold text-red-600'>
-                    {formatCurrency(taxResult.totalTax)}
-                  </p>
-                </div>
+              <div className='h-64'>
+                <ResponsiveContainer width='100%' height='100%'>
+                  <BarChart
+                    data={chartData}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray='3 3' />
+                    <XAxis dataKey='name' />
+                    <YAxis yAxisId='left' orientation='left' stroke='#82ca9d' />
+                    <YAxis
+                      yAxisId='right'
+                      orientation='right'
+                      stroke='#8884d8'
+                    />
+                    <Tooltip
+                      formatter={(value: number) => formatCurrency(value)}
+                    />
+                    <Legend />
+                    <Bar
+                      yAxisId='left'
+                      dataKey='impostos'
+                      name='Total de Impostos'
+                      fill='#8884d8'
+                    />
+                    <Bar
+                      yAxisId='left'
+                      dataKey='lucro'
+                      name='Lucro Líquido'
+                      fill='#82ca9d'
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
-
-              <Separator />
 
               <div className='space-y-4'>
-                {Object.entries(taxResult.breakdown).map(([key, value]) => {
-                  if (typeof value !== 'number') return null
+                <div className='grid grid-cols-2 gap-4'>
+                  <Card
+                    className={
+                      taxResults.simples.netProfit >=
+                        taxResults.presumido.netProfit &&
+                      taxResults.simples.netProfit >=
+                        taxResults.real.netProfit &&
+                      taxResults.simples.netProfit >= taxResults.mei.netProfit
+                        ? 'border-green-500 border-2'
+                        : ''
+                    }
+                  >
+                    <CardHeader className='pb-2'>
+                      <CardTitle className='text-base'>
+                        Simples Nacional
+                      </CardTitle>
+                      <CardDescription>
+                        {taxResults.simples.breakdown.exceedsLimit
+                          ? 'Faturamento excede o limite!'
+                          : `Anexo ${annex} - Alíquota Efetiva: ${taxResults.simples.effectiveRate.toFixed(
+                              2
+                            )}%`}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className='space-y-1'>
+                        <div className='flex justify-between'>
+                          <span>Total de Impostos:</span>
+                          <span className='font-medium text-red-600'>
+                            {formatCurrency(taxResults.simples.totalTax)}
+                          </span>
+                        </div>
+                        <div className='flex justify-between'>
+                          <span>Lucro Líquido:</span>
+                          <span className='font-medium text-green-600'>
+                            {formatCurrency(taxResults.simples.netProfit)}
+                          </span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
 
-                  let label = ''
-                  switch (key) {
-                    case 'irpj':
-                      label = 'IRPJ'
-                      break
-                    case 'csll':
-                      label = 'CSLL'
-                      break
-                    case 'pis':
-                      label = 'PIS'
-                      break
-                    case 'cofins':
-                      label = 'COFINS'
-                      break
-                    case 'iss':
-                      label = 'ISS'
-                      break
-                    case 'icms':
-                      label = 'ICMS'
-                      break
-                    case 'ipi':
-                      label = 'IPI'
-                      break
-                    case 'cpp':
-                      label = 'CPP'
-                      break
-                    case 'fixedFee':
-                      label = 'Taxa Fixa'
-                      break
-                    case 'municipalTax':
-                      label =
-                        activity === 'services' || activity === 'transport'
-                          ? 'ISS'
-                          : 'ICMS'
-                      break
-                    default:
-                      label = key.toUpperCase()
-                  }
+                  <Card
+                    className={
+                      taxResults.presumido.netProfit >=
+                        taxResults.simples.netProfit &&
+                      taxResults.presumido.netProfit >=
+                        taxResults.real.netProfit &&
+                      taxResults.presumido.netProfit >= taxResults.mei.netProfit
+                        ? 'border-green-500 border-2'
+                        : ''
+                    }
+                  >
+                    <CardHeader className='pb-2'>
+                      <CardTitle className='text-base'>
+                        Lucro Presumido
+                      </CardTitle>
+                      <CardDescription>
+                        Alíquota Efetiva:{' '}
+                        {taxResults.presumido.effectiveRate.toFixed(2)}%
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className='space-y-1'>
+                        <div className='flex justify-between'>
+                          <span>Total de Impostos:</span>
+                          <span className='font-medium text-red-600'>
+                            {formatCurrency(taxResults.presumido.totalTax)}
+                          </span>
+                        </div>
+                        <div className='flex justify-between'>
+                          <span>Lucro Líquido:</span>
+                          <span className='font-medium text-green-600'>
+                            {formatCurrency(taxResults.presumido.netProfit)}
+                          </span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
 
-                  return (
-                    <div key={key} className='flex justify-between'>
-                      <span>{label}</span>
-                      <span>{formatCurrency(value)}</span>
-                    </div>
-                  )
-                })}
-              </div>
+                  <Card
+                    className={
+                      taxResults.real.netProfit >=
+                        taxResults.simples.netProfit &&
+                      taxResults.real.netProfit >=
+                        taxResults.presumido.netProfit &&
+                      taxResults.real.netProfit >= taxResults.mei.netProfit
+                        ? 'border-green-500 border-2'
+                        : ''
+                    }
+                  >
+                    <CardHeader className='pb-2'>
+                      <CardTitle className='text-base'>Lucro Real</CardTitle>
+                      <CardDescription>
+                        Alíquota Efetiva:{' '}
+                        {taxResults.real.effectiveRate.toFixed(2)}%
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className='space-y-1'>
+                        <div className='flex justify-between'>
+                          <span>Total de Impostos:</span>
+                          <span className='font-medium text-red-600'>
+                            {formatCurrency(taxResults.real.totalTax)}
+                          </span>
+                        </div>
+                        <div className='flex justify-between'>
+                          <span>Lucro Líquido:</span>
+                          <span className='font-medium text-green-600'>
+                            {formatCurrency(taxResults.real.netProfit)}
+                          </span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
 
-              <div className='h-64'>
-                <TaxResultsChart
-                  results={{
-                    incomeTax: taxResult.breakdown.irpj || 0,
-                    socialSecurity: taxResult.breakdown.csll || 0,
-                    municipalTax:
-                      taxResult.breakdown.iss || taxResult.breakdown.icms || 0,
-                    otherTaxes:
-                      (taxResult.breakdown.pis || 0) +
-                      (taxResult.breakdown.cofins || 0) +
-                      (taxResult.breakdown.cpp || 0) +
-                      (taxResult.breakdown.ipi || 0),
-                    totalTax: taxResult.totalTax,
-                    effectiveRate: taxResult.effectiveRate,
-                  }}
-                />
-              </div>
+                  <Card
+                    className={
+                      taxResults.mei.netProfit >=
+                        taxResults.simples.netProfit &&
+                      taxResults.mei.netProfit >=
+                        taxResults.presumido.netProfit &&
+                      taxResults.mei.netProfit >= taxResults.real.netProfit
+                        ? 'border-green-500 border-2'
+                        : ''
+                    }
+                  >
+                    <CardHeader className='pb-2'>
+                      <CardTitle className='text-base'>MEI</CardTitle>
+                      <CardDescription>
+                        {taxResults.mei.breakdown.exceedsLimit
+                          ? 'Faturamento excede o limite!'
+                          : `Taxa Fixa: ${formatCurrency(
+                              meiValues.monthlyFee
+                            )}`}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className='space-y-1'>
+                        <div className='flex justify-between'>
+                          <span>Total de Impostos:</span>
+                          <span className='font-medium text-red-600'>
+                            {formatCurrency(taxResults.mei.totalTax)}
+                          </span>
+                        </div>
+                        <div className='flex justify-between'>
+                          <span>Lucro Líquido:</span>
+                          <span className='font-medium text-green-600'>
+                            {formatCurrency(taxResults.mei.netProfit)}
+                          </span>
+                        </div>
+                      </div>
+                      {taxResults.mei.breakdown.exceedsLimit && (
+                        <div className='text-xs text-red-500 mt-2 flex items-center'>
+                          <Info className='w-4 h-4 mr-1' />
+                          Limite MEI ultrapassado - Considere migrar para outro
+                          regime
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
 
-              <div className='flex flex-wrap gap-2'>
-                <Button
-                  variant='outline'
-                  onClick={handleShowDetails}
-                  className='flex-1'
-                >
-                  Ver Detalhes
-                </Button>
-                <Button variant='outline' className='flex-1'>
-                  Comparar Regimes
-                </Button>
-                <Button className='flex-1'>Exportar Cálculo</Button>
+                <div className='text-sm text-muted-foreground flex items-center'>
+                  <Info className='w-4 h-4 mr-2' />
+                  Valores estimados - Consulte um contador para análise
+                  detalhada
+                </div>
               </div>
             </CardContent>
+            <CardFooter className='flex justify-between'>
+              <Button variant='outline'>
+                <Download className='w-4 h-4 mr-2' />
+                Exportar Dados
+              </Button>
+              <Button>
+                Simular Opções <ArrowRight className='w-4 h-4 ml-2' />
+              </Button>
+            </CardFooter>
           </Card>
         )}
       </div>
-
-      <div className='mt-8'>
-        <Card>
-          <CardHeader>
-            <CardTitle>Calendário Fiscal</CardTitle>
-            <CardDescription>
-              Próximos vencimentos de impostos e obrigações fiscais
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className='space-y-4'>
-              <div className='flex items-center justify-between rounded-lg border p-4'>
-                <div>
-                  <p className='font-medium'>Simples Nacional</p>
-                  <p className='text-sm text-muted-foreground'>
-                    DAS - Documento de Arrecadação do Simples
-                  </p>
-                </div>
-                <div className='text-right'>
-                  <p className='font-medium'>20/05/2023</p>
-                  <p className='text-sm text-muted-foreground'>
-                    Vencimento em 5 dias
-                  </p>
-                </div>
-              </div>
-              <div className='flex items-center justify-between rounded-lg border p-4'>
-                <div>
-                  <p className='font-medium'>INSS</p>
-                  <p className='text-sm text-muted-foreground'>
-                    Contribuição Previdenciária
-                  </p>
-                </div>
-                <div className='text-right'>
-                  <p className='font-medium'>15/05/2023</p>
-                  <p className='text-sm text-muted-foreground'>
-                    Vencido há 0 dias
-                  </p>
-                </div>
-              </div>
-              <div className='flex items-center justify-between rounded-lg border p-4'>
-                <div>
-                  <p className='font-medium'>IRRF</p>
-                  <p className='text-sm text-muted-foreground'>
-                    Imposto de Renda Retido na Fonte
-                  </p>
-                </div>
-                <div className='text-right'>
-                  <p className='font-medium'>20/05/2023</p>
-                  <p className='text-sm text-muted-foreground'>
-                    Vencimento em 5 dias
-                  </p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button variant='outline' className='w-full'>
-              Ver Calendário Completo
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
-
-      <TaxDetailsModal
-        isOpen={showDetailsModal}
-        onClose={() => setShowDetailsModal(false)}
-        taxResult={taxResult}
-        taxRegime={taxRegime}
-        activity={activity}
-        annex={annex}
-        revenue={revenue}
-        expenses={expenses}
-        period={period}
-      />
     </div>
   )
 }

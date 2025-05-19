@@ -10,6 +10,7 @@ import {
 } from 'recharts'
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart'
 
+// Sample data
 const data = [
   { date: 'Jan', expenses: 1200 },
   { date: 'Fev', expenses: 1500 },
@@ -74,3 +75,4 @@ export function AccountingExpensesChart() {
     </ChartContainer>
   )
 }
+

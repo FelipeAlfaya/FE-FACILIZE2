@@ -82,7 +82,7 @@ export function FinancialReports() {
       </div>
 
       <Tabs defaultValue='reports'>
-        <TabsList className='grid w-full grid-cols-3 md:w-auto md:grid-cols-none'>
+        <TabsList className='grid-row w-full md:w-auto md:grid-cols-none'>
           <TabsTrigger value='reports'>Meus Relatórios</TabsTrigger>
           <TabsTrigger value='templates'>Modelos</TabsTrigger>
           <TabsTrigger value='scheduled'>Agendados</TabsTrigger>
@@ -421,3 +421,4 @@ export function FinancialReports() {
     </div>
   )
 }
+

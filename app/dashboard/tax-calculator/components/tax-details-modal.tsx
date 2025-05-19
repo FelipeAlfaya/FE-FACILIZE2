@@ -11,10 +11,23 @@ import {
 } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
+import {
+  ActivityType,
+  AnnexType,
+  PeriodType,
+  TaxResult,
+} from './tax-calculator'
 
-type TaxDetailsModalProps = {
+interface TaxDetailsModalProps {
   isOpen: boolean
   onClose: () => void
+  taxResult: TaxResult | null
+  taxRegime: string
+  activity: ActivityType
+  annex: AnnexType
+  revenue: string
+  expenses: string
+  period: PeriodType
 }
 
 export function TaxDetailsModal({ isOpen, onClose }: TaxDetailsModalProps) {
@@ -307,3 +320,4 @@ export function TaxDetailsModal({ isOpen, onClose }: TaxDetailsModalProps) {
     </Dialog>
   )
 }
+

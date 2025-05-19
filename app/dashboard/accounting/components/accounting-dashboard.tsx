@@ -30,7 +30,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { DatePickerWithRange } from '../../components/date-range-picker'
 import { AccountingRevenueChart } from './accounting-revenue-chart'
 import { AccountingExpensesChart } from './accounting-expenses-chart'
 import { AccountingTransactionsTable } from './accounting-transactions-table'
@@ -38,9 +37,11 @@ import { AccountingTaxesTable } from './accounting-taxes-table'
 import { AccountingInvoicesTable } from './accounting-invoices-table'
 import { AccountingCategoryChart } from './accounting-category-chart'
 import { FinancialNavigation } from '../../tax-calculator/components/financial-navigation'
+import { DatePickerWithRange } from '../../components/date-range-picker'
+import { DateRange } from 'react-day-picker'
 
 export function AccountingDashboard() {
-  const [dateRange, setDateRange] = useState({
+  const [dateRange, setDateRange] = useState<DateRange>({
     from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
     to: new Date(),
   })
@@ -53,15 +54,7 @@ export function AccountingDashboard() {
 
       <div className='mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center'>
         <div className='flex flex-1 flex-wrap items-center gap-2'>
-          <DatePickerWithRange
-            date={dateRange}
-            setDate={(date) =>
-              setDateRange({
-                from: date.from || new Date(),
-                to: date.to || new Date(),
-              })
-            }
-          />
+          <DatePickerWithRange date={dateRange} setDate={setDateRange} />
           <Select value={period} onValueChange={setPeriod}>
             <SelectTrigger className='w-[180px]'>
               <SelectValue placeholder='Selecione o período' />
@@ -179,7 +172,7 @@ export function AccountingDashboard() {
 
       <div className='mt-8'>
         <Tabs defaultValue='transactions'>
-          <TabsList className='grid w-full grid-cols-3 md:w-auto md:grid-cols-none'>
+          <TabsList className='grid-row w-full md:w-auto md:grid-cols-none'>
             <TabsTrigger value='transactions'>Transações</TabsTrigger>
             <TabsTrigger value='invoices'>Notas Fiscais</TabsTrigger>
             <TabsTrigger value='taxes'>Impostos</TabsTrigger>
@@ -273,3 +266,4 @@ export function AccountingDashboard() {
     </div>
   )
 }
+

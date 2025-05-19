@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 
+// Sample data
 const invoices = [
   {
     id: 'NF-001',
@@ -203,3 +204,4 @@ export function AccountingInvoicesTable() {
     </div>
   )
 }
+

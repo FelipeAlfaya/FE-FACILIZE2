@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 
+// Sample data
 const taxes = [
   {
     id: 'TX-001',
@@ -226,3 +227,4 @@ export function AccountingTaxesTable() {
     </div>
   )
 }
+

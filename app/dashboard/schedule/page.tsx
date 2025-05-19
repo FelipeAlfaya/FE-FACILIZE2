@@ -7,37 +7,76 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { CheckCircle } from 'lucide-react'
 import { DashboardHeader } from '../components/dashboard-header'
-
-// Mock user data - in a real app, this would come from authentication
-const mockUser = {
-  id: '123',
-  name: 'John Doe',
-  email: 'john@example.com',
-  type: 'provider', // or 'client'
-}
+import { AvailabilityManager } from './components/availability-manager'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export default function SchedulePage() {
   const searchParams = useSearchParams()
   const [userType, setUserType] = useState<'provider' | 'client'>('provider')
   const [showSuccess, setShowSuccess] = useState(false)
+  const [providerId, setProviderId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // In a real app, you would get the user type from authentication
-    setUserType(mockUser.type as 'provider' | 'client')
+    const fetchUser = async () => {
+      try {
+        const token =
+          localStorage.getItem('access_token') ||
+          sessionStorage.getItem('access_token')
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}auth/me`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        )
 
-    // Check for success parameter in URL
+        if (!response.ok) throw new Error('Failed to fetch user')
+
+        const userData = await response.json()
+        console.log('Full userData response:', userData)
+        console.log('Provider data:', userData.data?.provider)
+
+        setUserType(userData.data.type.toLowerCase())
+
+        if (userData.data?.provider?.id) {
+          const id = userData.data.provider.id.toString()
+          console.log('Setting providerId to:', id)
+          setProviderId(id)
+        } else {
+          console.log('No provider ID found in response')
+          setProviderId(null)
+        }
+      } catch (error) {
+        console.error('Error fetching user:', error)
+        setProviderId(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchUser()
+
     const success = searchParams.get('success')
     if (success === 'true') {
       setShowSuccess(true)
-
-      // Hide success message after 5 seconds
-      const timer = setTimeout(() => {
-        setShowSuccess(false)
-      }, 5000)
-
+      const timer = setTimeout(() => setShowSuccess(false), 5000)
       return () => clearTimeout(timer)
     }
   }, [searchParams])
+
+  if (loading) {
+    return (
+      <div className='container mx-auto px-4 py-6'>
+        <div className='space-y-4'>
+          <Skeleton className='h-8 w-48' />
+          <Skeleton className='h-4 w-72' />
+          <Skeleton className='h-[400px] w-full' />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <>
@@ -71,10 +110,16 @@ export default function SchedulePage() {
               <ScheduleCalendar />
             </TabsContent>
             <TabsContent value='availability'>
-              <div className='text-center py-12 text-gray-500'>
-                {/* <p>Funcionalidade em desenvolvimento.</p>
-                <p>Em breve você poderá gerenciar sua disponibilidade aqui.</p> */}
-              </div>
+              {providerId ? (
+                <>
+                  <AvailabilityManager providerId={providerId} />
+                  {console.log('Rendering with providerId:', providerId)}
+                </>
+              ) : (
+                <div className='text-center py-12 text-gray-500'>
+                  <p>Nenhum provedor associado a esta conta</p>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         ) : (
