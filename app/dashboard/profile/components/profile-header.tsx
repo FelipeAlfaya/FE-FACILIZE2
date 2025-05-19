@@ -8,12 +8,7 @@ import { useState, useRef, ChangeEvent, useEffect } from 'react'
 import { toast } from 'sonner'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
-
-const defaultAvatars = [
-  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA...',
-  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA...',
-  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA...',
-]
+import { Avatar, AvatarFallback } from '@radix-ui/react-avatar'
 
 interface Plan {
   id: number
@@ -42,8 +37,6 @@ export function ProfileHeader() {
           fetchAvatar(user.avatar)
         }
       } else {
-        const randomIndex = Math.floor(Math.random() * defaultAvatars.length)
-        setAvatarSrc(defaultAvatars[randomIndex])
         setAvatarLoading(false)
       }
 
@@ -52,6 +45,15 @@ export function ProfileHeader() {
       }
     }
   }, [user])
+
+  const getNameInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((part) => part[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2)
+  }
 
   const fetchPlan = async (planId: number) => {
     setPlanLoading(true)
@@ -105,19 +107,10 @@ export function ProfileHeader() {
           setAvatarLoading(false)
         }
         reader.readAsDataURL(blob)
-      } else {
-        setRandomDefaultAvatar()
       }
     } catch (error) {
       console.error('Error fetching avatar:', error)
-      setRandomDefaultAvatar()
     }
-  }
-
-  const setRandomDefaultAvatar = () => {
-    const randomIndex = Math.floor(Math.random() * defaultAvatars.length)
-    setAvatarSrc(defaultAvatars[randomIndex])
-    setAvatarLoading(false)
   }
 
   const handleAvatarClick = () => {
@@ -195,7 +188,7 @@ export function ProfileHeader() {
             onClick={refreshUser}
             className='mt-2'
           >
-            Try Again
+            Tente novamente
           </Button>
         </div>
       </div>
@@ -211,16 +204,19 @@ export function ProfileHeader() {
               <Loader2 className='h-6 w-6 animate-spin text-gray-400' />
             </div>
           ) : (
-            <img
-              src={avatarSrc || '/placeholder.svg?height=96&width=96'}
-              alt='Profile picture'
-              className='w-full h-full object-cover transition-opacity duration-300'
-              onLoad={() => setAvatarLoading(false)}
-              onError={() => {
-                setRandomDefaultAvatar()
-                setAvatarLoading(false)
-              }}
-            />
+            <>
+              {avatarSrc ? (
+                <img
+                  src={avatarSrc}
+                  alt='Avatar'
+                  className='rounded-full object-cover'
+                />
+              ) : (
+                <div className='object-cover flex items-center justify-center w-full h-full text-gray-600 text-4xl text-bold'>
+                  {user?.name ? getNameInitials(user.name) : 'U'}
+                </div>
+              )}
+            </>
           )}
         </div>
         <Button
@@ -235,7 +231,7 @@ export function ProfileHeader() {
           ) : (
             <Camera className='h-4 w-4' />
           )}
-          <span className='sr-only'>Change photo</span>
+          <span className='sr-only'>Mudar de foto</span>
         </Button>
         <input
           type='file'
@@ -285,3 +281,4 @@ export function ProfileHeader() {
     </div>
   )
 }
+

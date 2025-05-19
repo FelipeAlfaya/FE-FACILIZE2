@@ -143,7 +143,6 @@ export function UsersView() {
         throw new Error('Failed to delete user')
       }
 
-      // Remove user from local state
       setUsers(users.filter((u) => u.id !== user.id))
       setUserToDelete(null)
 
@@ -192,24 +191,24 @@ export function UsersView() {
 
       <Card>
         <CardHeader>
-          <CardTitle>User Management</CardTitle>
+          <CardTitle>Gerenciamento de usuários</CardTitle>
           <CardDescription>
-            Manage your users, their roles and permissions.
+            Gerencie os usuários, seus tipos, etc...
           </CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div>Loading...</div>
+            <div>Carregando...</div>
           ) : (
             <>
               <div className='flex items-center justify-between mb-4'>
                 <div className='relative w-64'>
                   <Search className='absolute left-2 top-2.5 h-4 w-4 text-muted-foreground' />
-                  <Input placeholder='Search users...' className='pl-8' />
+                  <Input placeholder='Procure usuários...' className='pl-8' />
                 </div>
                 <div className='flex gap-2'>
-                  <Button variant='outline'>Export</Button>
-                  <Button variant='outline'>Filter</Button>
+                  <Button variant='outline'>Exportar</Button>
+                  <Button variant='outline'>Filtrar</Button>
                 </div>
               </div>
 
@@ -249,7 +248,7 @@ export function UsersView() {
                         <TableCell className='capitalize'>
                           {user.type.toLowerCase()}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className='select-none'>
                           <Badge
                             variant={
                               getStatusFromUser(user) === 'Active'
@@ -268,13 +267,15 @@ export function UsersView() {
                             <DropdownMenuTrigger asChild>
                               <Button variant='ghost' size='icon'>
                                 <MoreHorizontal className='h-4 w-4' />
-                                <span className='sr-only'>Open menu</span>
+                                <span className='sr-only'>Abrir menu</span>
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align='end'>
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem>View details</DropdownMenuItem>
-                              <DropdownMenuItem>Edit user</DropdownMenuItem>
+                              <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                              <DropdownMenuItem>Ver detalhes</DropdownMenuItem>
+                              <DropdownMenuItem>
+                                Editar usuário
+                              </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
@@ -285,18 +286,19 @@ export function UsersView() {
                                     }}
                                     className='text-red-600'
                                   >
-                                    Delete user
+                                    Deletar usuário
                                   </DropdownMenuItem>
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
                                   <AlertDialogHeader>
                                     <AlertDialogTitle>
-                                      Are you absolutely sure?
+                                      Você tem certeza?
                                     </AlertDialogTitle>
                                     <AlertDialogDescription>
-                                      This action cannot be undone. This will
-                                      permanently delete {user.name}'s account
-                                      and remove their data from our servers.
+                                      Essa ação não pode ser desfeita. Isso vai
+                                      deletar permanentemente a conta de{' '}
+                                      {user.name}e remover seus dados dos nossos
+                                      bancos.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
@@ -309,7 +311,7 @@ export function UsersView() {
                                       onClick={() =>
                                         user && handleDeleteUser(user)
                                       }
-                                      className='bg-red-600 hover:bg-red-700'
+                                      className='bg-red-600 rounded-4xl text-sm hover:bg-red-700'
                                     >
                                       Delete
                                     </AlertDialogAction>

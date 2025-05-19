@@ -40,6 +40,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { subscribeToNotifications } from '@/services/notifications-api'
 import { cn } from '@/lib/utils'
+import { AvatarFallback } from '@radix-ui/react-avatar'
 
 type Notification = {
   id: string
@@ -73,12 +74,6 @@ const subItems = {
     },
   ],
 }
-
-const defaultAvatars: string[] = [
-  'images/Profile-1',
-  'images/Profile-2',
-  'images/profile-3',
-]
 
 export function DashboardHeader() {
   const [notifications, setNotifications] = useState<Notification[]>([])
@@ -248,6 +243,15 @@ export function DashboardHeader() {
     }
   }
 
+  const getNameInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((part) => part[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2)
+  }
+
   useEffect(() => {
     if (!user?.id) return
 
@@ -276,21 +280,6 @@ export function DashboardHeader() {
     fetchNotifications()
   }, [notificationsOpen, user?.id])
 
-  useEffect(() => {
-    if (user) {
-      if (user.avatar) {
-        if (user.avatar.startsWith('data:')) {
-          setAvatarSrc(user.avatar)
-        } else {
-          fetchAvatar(user.avatar)
-        }
-      } else {
-        const randomIndex = Math.floor(Math.random() * defaultAvatars.length)
-        setAvatarSrc(defaultAvatars[randomIndex])
-      }
-    }
-  }, [user])
-
   const fetchAvatar = async (avatarUrl: string) => {
     try {
       const response = await fetch(
@@ -309,18 +298,10 @@ export function DashboardHeader() {
           setAvatarSrc(reader.result as string)
         }
         reader.readAsDataURL(blob)
-      } else {
-        setRandomDefaultAvatar()
       }
     } catch (error) {
       console.error('Error fetching avatar:', error)
-      setRandomDefaultAvatar()
     }
-  }
-
-  const setRandomDefaultAvatar = () => {
-    const randomIndex = Math.floor(Math.random() * defaultAvatars.length)
-    setAvatarSrc(defaultAvatars[randomIndex])
   }
 
   const handleLogout = () => {
@@ -431,6 +412,22 @@ export function DashboardHeader() {
               </>
             )}
 
+            {user?.isAdmin && (
+              <Link
+                href='admin'
+                className={cn(
+                  'flex items-center p-2 rounded-md hover:bg-accent',
+                  collapsed ? 'justify-center' : ''
+                )}
+                title={collapsed ? 'Administração' : undefined}
+              >
+                <BarChart3 className='h-5 w-5 text-red-500' />
+                {!collapsed && (
+                  <span className='ml-3 text-red-500'>Administração</span>
+                )}
+              </Link>
+            )}
+
             <Link
               href='/dashboard/providers'
               className={cn(
@@ -465,20 +462,6 @@ export function DashboardHeader() {
             >
               <Calendar className='h-5 w-5' />
               {!collapsed && <span className='ml-3'>Agenda</span>}
-            </Link>
-
-            <Link
-              href='admin'
-              className={cn(
-                'flex items-center p-2 rounded-md hover:bg-accent',
-                collapsed ? 'justify-center' : ''
-              )}
-              title={collapsed ? 'Administração' : undefined}
-            >
-              <BarChart3 className='h-5 w-5' />
-              {!collapsed && (
-                <span className='ml-3 text-yellow'>Administração</span>
-              )}
             </Link>
 
             {user?.provider?.cnpj && (
@@ -599,12 +582,17 @@ export function DashboardHeader() {
                   <DropdownMenuTrigger asChild>
                     <Button variant='ghost' size='sm' className='justify-start'>
                       <div className='flex items-center'>
-                        <img
-                          src={avatarSrc || '/placeholder.svg'}
-                          alt='Avatar'
-                          className='rounded-full w-5 h-5 mr-2 object-cover'
-                          onError={setRandomDefaultAvatar}
-                        />
+                        {avatarSrc ? (
+                          <img
+                            src={avatarSrc}
+                            alt='Avatar'
+                            className='rounded-full w-5 h-5 mr-2 object-cover'
+                          />
+                        ) : (
+                          <div className='rounded-full w-5 h-5 mr-2 bg-muted flex items-center justify-center text-xs font-medium'>
+                            {user?.name ? getNameInitials(user.name) : 'U'}
+                          </div>
+                        )}
                         <span>Perfil</span>
                       </div>
                     </Button>

@@ -12,6 +12,7 @@ type User = {
   updatedAt: string
   avatar?: string
   phone?: string
+  isAdmin?: boolean
   address?: {
     street: string
     number: string
