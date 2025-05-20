@@ -71,6 +71,8 @@ interface UserData {
   deletedAt: string | null
   provider: ProviderData | null
   client: ClientData | null
+  isEmailVerified: boolean
+  isPhoneVerified: boolean
 }
 
 interface UserContextType {
@@ -175,3 +177,4 @@ export function useUser() {
   }
   return context
 }
+

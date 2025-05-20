@@ -6,9 +6,18 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Card, CardContent } from '@/components/ui/card'
-import { AlertCircle, Smartphone, Laptop, Shield, LogOut } from 'lucide-react'
+import {
+  AlertCircle,
+  Smartphone,
+  Laptop,
+  Shield,
+  LogOut,
+  Mail,
+  CheckCircle2,
+} from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { useUser } from '@/context/UserContext'
+import { EmailVerificationModal } from './email-verification-modal'
 
 export function SecurityTab() {
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -215,6 +224,44 @@ export function SecurityTab() {
         </CardContent>
       </Card>
 
+      {!user?.isEmailVerified && (
+        <Card>
+          <CardContent className='p-6'>
+            <div className='flex items-center justify-between'>
+              <div className='flex items-center space-x-3'>
+                <Mail className='h-6 w-6 text-yellow-500' />
+                <div>
+                  <h3 className='text-lg font-medium'>
+                    Verificação de Email Pendente
+                  </h3>
+                  <p className='text-sm text-muted-foreground'>
+                    Por favor, verifique seu endereço de email para acessar
+                    todos os recursos.
+                  </p>
+                </div>
+              </div>
+              {user?.email && <EmailVerificationModal email={user.email} />}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {user?.isEmailVerified && (
+        <Card>
+          <CardContent className='p-6'>
+            <div className='flex items-center space-x-3'>
+              <CheckCircle2 className='h-6 w-6 text-green-500' />
+              <div>
+                <h3 className='text-lg font-medium'>Email Verificado</h3>
+                <p className='text-sm text-muted-foreground'>
+                  Seu endereço de email foi verificado com sucesso.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardContent className='p-6'>
           <h3 className='text-lg font-medium mb-4'>
@@ -299,3 +346,4 @@ export function SecurityTab() {
     </div>
   )
 }
+
