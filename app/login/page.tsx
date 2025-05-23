@@ -104,16 +104,19 @@ export default function Login() {
     setIsLoading(true)
 
     try {
-      const response = await fetch('http://localhost:3000/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-        }),
-      })
+      const response = await fetch(
+        `${process.env.NEXT_API_PUBLIC_URL}auth/login`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password,
+          }),
+        }
+      )
 
       const data = await response.json()
 
@@ -348,4 +351,3 @@ export default function Login() {
     </main>
   )
 }
-
