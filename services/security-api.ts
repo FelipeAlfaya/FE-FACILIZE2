@@ -1,5 +1,5 @@
 'use server'
-const baseUrl = `${process.env.NEXT_API_PUBLIC_URL}`
+const baseUrl = `${process.env.NEXT_PUBLIC_API_URL}`
 
 export const fetchChangePassword = async (
   userId: number,

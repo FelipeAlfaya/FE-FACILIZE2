@@ -518,7 +518,6 @@ export default function SignupForm() {
           type: 'CLIENT',
           documentType: 'CPF', // Client is always CPF
           document: formatDocument(formData.document),
-          terms: formData.terms,
           // No address, specialty, plan for client registration
         }
 
@@ -903,4 +902,3 @@ export default function SignupForm() {
     </main>
   )
 }
-
