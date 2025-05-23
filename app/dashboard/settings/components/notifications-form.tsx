@@ -97,12 +97,13 @@ export function NotificationsForm() {
     chatMessages: true,
     taxReminders: true,
   })
+  const baseApi = `${process.env.NEXT_API_PUBLIC_URL}`
 
   useEffect(() => {
     const fetchSettings = async () => {
       try {
         const response = await fetch(
-          'http://localhost:3000/users/1/notification-settings',
+          `${baseApi}users/1/notification-settings`,
           {
             headers: {
               Authorization: `Bearer ${localStorage.getItem('access_token')}`,
@@ -143,17 +144,14 @@ export function NotificationsForm() {
     setIsSubmitting(true)
 
     try {
-      const response = await fetch(
-        'http://localhost:3000/users/1/notification-settings',
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-          },
-          body: JSON.stringify(settings),
-        }
-      )
+      const response = await fetch(`${baseApi}users/1/notification-settings`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+        },
+        body: JSON.stringify(settings),
+      })
 
       if (!response.ok) throw new Error('Falha ao salvar configurações')
 
@@ -211,4 +209,3 @@ export function NotificationsForm() {
     </form>
   )
 }
-

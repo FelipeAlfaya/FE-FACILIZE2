@@ -65,21 +65,22 @@ const COOKIE_OPTIONS = {
   secure: process.env.NODE_ENV === 'production',
 }
 
-// Função utilitária para obter token
+// Função utilitária para obter token - apenas localStorage/sessionStorage
 const getToken = (): string | null => {
   if (typeof window === 'undefined') return null
 
-  // Verificar primeiro nos storages
-  const token =
+  // Verificar apenas nos storages locais, não nos cookies
+  return (
     localStorage.getItem('access_token') ||
-    sessionStorage.getItem('access_token')
+    sessionStorage.getItem('access_token') ||
+    null
+  )
+}
 
-  // Se não encontrar nos storages, verificar nos cookies
-  if (!token) {
-    return Cookies.get(COOKIE_TOKEN_NAME) || null
-  }
-
-  return token
+// Função específica para obter token dos cookies (para middleware apenas)
+const getTokenFromCookie = (): string | null => {
+  if (typeof window === 'undefined') return null
+  return Cookies.get(COOKIE_TOKEN_NAME) || null
 }
 
 // Função utilitária para obter dados do usuário
@@ -98,7 +99,7 @@ const getUserData = (): User | null => {
     }
   }
 
-  // Se não encontrar nos storages, verificar nos cookies
+  // Se não encontrar nos storages, verificar nos cookies (para middleware)
   const cookieUserString = Cookies.get(COOKIE_USER_NAME)
   if (cookieUserString) {
     try {
@@ -128,17 +129,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const syncCookiesWithLocalStorage = () => {
     if (typeof window === 'undefined') return
 
-    // Sincronizar token
+    // Sincronizar token - um sentido apenas: localStorage -> cookie
     const token = getToken()
     if (token) {
-      localStorage.setItem('access_token', token)
+      // Definir apenas o cookie para o middleware
       Cookies.set(COOKIE_TOKEN_NAME, token, COOKIE_OPTIONS)
     }
 
     // Sincronizar dados do usuário
     const userData = getUserData()
     if (userData) {
-      localStorage.setItem('user', JSON.stringify(userData))
       Cookies.set(COOKIE_USER_NAME, JSON.stringify(userData), COOKIE_OPTIONS)
     }
 
@@ -172,11 +172,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return new Promise<void>((resolve) => {
       const storage = remember ? localStorage : sessionStorage
 
-      // Armazenar no storage (mantendo compatibilidade)
+      // Armazenar no storage (principal)
       storage.setItem('access_token', token)
       storage.setItem('user', JSON.stringify(user))
 
-      // Armazenar também nos cookies
+      // Armazenar também nos cookies (para middleware)
       Cookies.set(COOKIE_TOKEN_NAME, token, {
         ...COOKIE_OPTIONS,
         // Para o sessionStorage, use expires: undefined para fazer o cookie expirar com a sessão
@@ -195,46 +195,66 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     })
   }
 
-  const logout = () => {
-    // Limpar todos os storages
-    localStorage.removeItem('access_token')
-    sessionStorage.removeItem('access_token')
-    localStorage.removeItem('user')
-    sessionStorage.removeItem('user')
+  const logout = async () => {
+    try {
+      const token = getToken()
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
 
-    // Limpar rotas em desenvolvimento (apenas para segurança)
-    localStorage.removeItem('devRoutes')
-    sessionStorage.removeItem('devRoutes')
+      if (token) {
+        try {
+          const response = await fetch(`${apiUrl}/auth/logout`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+          })
 
-    // Limpar favoritos (opcional, mas para limpeza completa)
-    localStorage.removeItem('favoriteRoutes')
-    sessionStorage.removeItem('favoriteRoutes')
-
-    // Limpar todos os cookies relacionados à autenticação
-    Cookies.remove('access_token', { path: '/' })
-    Cookies.remove('user_data', { path: '/' })
-    Cookies.remove('devRoutes', { path: '/' })
-
-    // Detectar e limpar cookies potencialmente relacionados à autenticação
-    const allCookies = Cookies.get()
-    Object.keys(allCookies).forEach((cookieName) => {
-      if (
-        cookieName.includes('token') ||
-        cookieName.includes('auth') ||
-        cookieName.includes('user') ||
-        cookieName.includes('session') ||
-        cookieName.includes('dev')
-      ) {
-        Cookies.remove(cookieName, { path: '/' })
+          console.log('Resposta do logout:', response.status)
+        } catch (err) {
+          console.error('Erro na chamada de logout:', err)
+        }
       }
-    })
+    } finally {
+      localStorage.clear()
+      sessionStorage.clear()
 
-    console.log(
-      'Logout completo - Todos os dados de autenticação foram removidos'
-    )
+      const removalOptions = {
+        path: '/',
+        sameSite: 'strict' as const,
+        secure: process.env.NODE_ENV === 'production',
+      }
 
-    // Atualizar o estado
-    setAuthState({ token: null, user: null })
+      const possibleCookies = [
+        COOKIE_TOKEN_NAME,
+        COOKIE_USER_NAME,
+        'devRoutes',
+        'access_token',
+        'user_data',
+        'session',
+        'auth',
+        'session_token',
+      ]
+
+      possibleCookies.forEach((cookie) => {
+        Cookies.remove(cookie, removalOptions)
+
+        if (cookie === 'session_token') {
+          document.cookie = `session_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`
+          document.cookie = `session_token=; max-age=0; path=/;`
+
+          const domain = window.location.hostname
+          document.cookie = `session_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${domain};`
+        }
+      })
+
+      console.log('Cookies após logout:', Cookies.get())
+
+      setAuthState({ token: null, user: null })
+
+      window.location.href = '/login?logout=true'
+    }
   }
 
   return (

@@ -1,5 +1,5 @@
 'use server'
-const baseUrl = 'http://localhost:3000'
+const baseUrl = `${process.env.NEXT_API_PUBLIC_URL}`
 
 export const fetchChangePassword = async (
   userId: number,
@@ -33,4 +33,3 @@ export const fetchChangePassword = async (
     }
   }
 }
-

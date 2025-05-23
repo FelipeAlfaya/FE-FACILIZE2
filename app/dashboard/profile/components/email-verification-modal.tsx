@@ -31,6 +31,7 @@ export function EmailVerificationModal({
   const [token, setToken] = useState('')
   const [state, setState] = useState<VerificationState>('idle')
   const [message, setMessage] = useState('')
+  const baseApi = `${process.env.NEXT_API_PUBLIC_URL}`
 
   // Send verification code when modal is opened
   useEffect(() => {
@@ -50,19 +51,16 @@ export function EmailVerificationModal({
     setMessage('Enviando código de verificação...')
 
     try {
-      const response = await fetch(
-        'http://localhost:3000/users/send-verification-code',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-          },
-          body: JSON.stringify({
-            email,
-          }),
-        }
-      )
+      const response = await fetch(`${baseApi}users/send-verification-code`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+        },
+        body: JSON.stringify({
+          email,
+        }),
+      })
 
       if (!response.ok) {
         const errorData = await response.json()
@@ -100,20 +98,17 @@ export function EmailVerificationModal({
     setMessage('Verificando seu código...')
 
     try {
-      const response = await fetch(
-        'http://localhost:3000/users/verify-email-code',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-          },
-          body: JSON.stringify({
-            email,
-            code: token,
-          }),
-        }
-      )
+      const response = await fetch(`${baseApi}users/verify-email-code`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+        },
+        body: JSON.stringify({
+          email,
+          code: token,
+        }),
+      })
 
       if (!response.ok) {
         const errorData = await response.json()

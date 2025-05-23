@@ -91,6 +91,7 @@ export function UsersView() {
   const [meta, setMeta] = useState<PaginatedResponse['meta'] | null>(null)
   const { toast } = useToast()
   const [userToDelete, setUserToDelete] = useState<User | null>(null)
+  const baseApi = `${process.env.NEXT_API_PUBLIC_URL}`
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -103,14 +104,11 @@ export function UsersView() {
           throw new Error('No access token found')
         }
 
-        const response = await fetch(
-          `http://localhost:3000/users?page=${currentPage}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        )
+        const response = await fetch(`${baseApi}users?page=${currentPage}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
 
         if (!response.ok) {
           throw new Error('Failed to fetch users')
@@ -143,7 +141,7 @@ export function UsersView() {
         throw new Error('No access token found')
       }
 
-      const response = await fetch(`http://localhost:3000/users/${user.id}`, {
+      const response = await fetch(`${baseApi}users/${user.id}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,

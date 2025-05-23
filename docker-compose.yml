@@ -11,3 +11,9 @@ services:
     environment:
       - NODE_ENV=production
     restart: unless-stopped
+    networks:
+      - facilize-network
+
+networks:
+  facilize-network:
+    external: true
