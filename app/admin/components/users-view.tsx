@@ -91,7 +91,7 @@ export function UsersView() {
   const [meta, setMeta] = useState<PaginatedResponse['meta'] | null>(null)
   const { toast } = useToast()
   const [userToDelete, setUserToDelete] = useState<User | null>(null)
-  const baseApi = `${process.env.NEXT_API_PUBLIC_URL}`
+  const baseApi = `${process.env.NEXT_PUBLIC_API_URL}`
 
   useEffect(() => {
     const fetchUsers = async () => {

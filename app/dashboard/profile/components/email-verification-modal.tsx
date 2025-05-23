@@ -31,7 +31,7 @@ export function EmailVerificationModal({
   const [token, setToken] = useState('')
   const [state, setState] = useState<VerificationState>('idle')
   const [message, setMessage] = useState('')
-  const baseApi = `${process.env.NEXT_API_PUBLIC_URL}`
+  const baseApi = `${process.env.NEXT_PUBLIC_API_URL}`
 
   // Send verification code when modal is opened
   useEffect(() => {

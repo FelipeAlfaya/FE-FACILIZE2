@@ -13,7 +13,7 @@ export type Plan = {
 }
 
 export async function fetchPlans(): Promise<Plan[]> {
-  const response = await fetch(`${process.env.NEXT_API_PUBLIC_URL}plans`)
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}plans`)
   if (!response.ok) {
     throw new Error('Failed to fetch plans')
   }
@@ -21,7 +21,7 @@ export async function fetchPlans(): Promise<Plan[]> {
 }
 
 export async function fetchPlanById(id: number): Promise<Plan> {
-  const response = await fetch(`${process.env.NEXT_API_PUBLIC_URL}plans/${id}`)
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}plans/${id}`)
   if (!response.ok) {
     throw new Error('Failed to fetch plan')
   }
