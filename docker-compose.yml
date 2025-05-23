@@ -1,0 +1,13 @@
+version: '3.9'
+
+services:
+  nextjs:
+    build: .
+    container_name: FE-Facillize
+    ports:
+      - "3001:3001"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
