@@ -13,7 +13,7 @@ import Image from 'next/image'
 
 export default function Footer() {
   return (
-    <footer className='bg-gray-900 text-gray-200 dark:bg-slate-800'>
+    <footer className='bg-gray-900 text-gray-200 dark:bg-slate-900'>
       <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
         {/* Newsletter Section */}
         <div className='py-12 border-b border-gray-800'>
@@ -242,13 +242,13 @@ export default function Footer() {
           </div>
           <div className='flex gap-6 text-sm'>
             <Link
-              href='/termos'
+              href='/legal'
               className='text-gray-400 hover:text-white transition-colors duration-300'
             >
               Termos de Uso
             </Link>
             <Link
-              href='/privacidade'
+              href='/legal'
               className='text-gray-400 hover:text-white transition-colors duration-300'
             >
               Política de Privacidade

@@ -26,8 +26,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import Link from 'next/link'
+import { useAuthCheck } from '@/hooks/useAuthCheck'
 
-// Mock data for invoices
 const mockInvoices = [
   {
     id: '1',
@@ -77,6 +77,7 @@ const mockInvoices = [
 ]
 
 export default function InvoicesPage() {
+  useAuthCheck('PROVIDER')
   return (
     <div className='min-h-screen bg-background'>
       <DashboardHeader />

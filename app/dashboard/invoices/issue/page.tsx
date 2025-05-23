@@ -1,4 +1,5 @@
 'use client'
+import { useAuthCheck } from '@/hooks/useAuthCheck'
 import { DashboardHeader } from '../../components/dashboard-header'
 import { InvoiceForm } from '../../components/invoice-form'
 import {
@@ -11,6 +12,8 @@ import {
 import { FileText } from 'lucide-react'
 
 export default function IssueInvoicePage() {
+  useAuthCheck('PROVIDER')
+
   return (
     <div className='min-h-screen bg-background'>
       <DashboardHeader />

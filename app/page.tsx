@@ -40,13 +40,15 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <motion.button
-              className='bg-white text-blue-600 hover:bg-blue-50 px-4 py-2 rounded'
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              Começar
-            </motion.button>
+            <Link href='/signup'>
+              <motion.button
+                className='bg-white text-blue-600 hover:bg-blue-50 px-4 py-2 rounded'
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Começar
+              </motion.button>
+            </Link>
           </motion.div>
         </div>
       </section>
@@ -68,14 +70,14 @@ export default function Home() {
               SEU TRABALHO MAIS{' '}
               <span className='text-blue-600'>ORGANIZADO</span>!
             </h2>
-            <p className='text-gray-600 mb-6'>
+            <p className='mb-6 dark:text-gray-400'>
               A Facilize é a plataforma completa para profissionais autônomos e
               pequenas empresas que desejam organizar seu negócio de forma
               simples e eficiente. Com nossa solução, você pode emitir notas
               fiscais, gerenciar clientes, controlar agendamentos e muito mais,
               tudo em um único lugar.
             </p>
-            <p className='text-gray-600 mb-6'>
+            <p className='mb-6 dark:text-gray-400'>
               Desenvolvida pensando nas necessidades reais dos empreendedores
               brasileiros, nossa plataforma elimina a burocracia e permite que
               você foque no que realmente importa: fazer seu negócio crescer.
@@ -134,7 +136,7 @@ export default function Home() {
       <section className='py-16 px-4 md:px-8 max-w-7xl mx-auto'>
         <AnimatedSection>
           <h2 className='text-2xl font-bold text-center mb-12'>
-            NOSSOS <span className='text-purple-600'>PLANOS</span>
+            NOSSOS <span className='text-blue-600'>PLANOS</span>
           </h2>
         </AnimatedSection>
 
@@ -204,3 +206,4 @@ export default function Home() {
     </main>
   )
 }
+

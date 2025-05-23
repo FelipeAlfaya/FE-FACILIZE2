@@ -35,7 +35,6 @@ export default function Contato() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    // Lógica de envio do formulário
     console.log('Formulário enviado:', formData)
   }
 
@@ -88,7 +87,7 @@ export default function Contato() {
   ]
 
   return (
-    <main className='min-h-screen bg-gray-50 dark:bg-gray-900'>
+    <main className='min-h-screen'>
       <Header />
 
       {/* Hero Section */}
@@ -257,7 +256,7 @@ export default function Contato() {
       </section>
 
       {/* FAQ Section */}
-      <section className='py-16 bg-gray-100 dark:bg-gray-800'>
+      <section className='py-16'>
         <div className='max-w-4xl mx-auto px-4 md:px-8'>
           <motion.div
             initial={{ opacity: 0 }}

@@ -45,13 +45,11 @@ import {
 } from '@/components/ui/form'
 import { Separator } from '@/components/ui/separator'
 
-// Validation schema for CNPJ
 const cnpjSchema = z.string().refine(
   (value) => {
     const cnpj = value.replace(/[^\d]/g, '')
     if (cnpj.length !== 14) return false
 
-    // Basic CNPJ validation algorithm
     let sum = 0
     let weight = 5
     for (let i = 0; i < 12; i++) {
@@ -78,13 +76,11 @@ const cnpjSchema = z.string().refine(
   { message: 'CNPJ inválido' }
 )
 
-// Validation schema for CPF
 const cpfSchema = z.string().refine(
   (value) => {
     const cpf = value.replace(/[^\d]/g, '')
     if (cpf.length !== 11) return false
 
-    // Basic CPF validation algorithm
     let sum = 0
     for (let i = 0; i < 9; i++) {
       sum += Number.parseInt(cpf.charAt(i)) * (10 - i)
@@ -107,9 +103,7 @@ const cpfSchema = z.string().refine(
   { message: 'CPF inválido' }
 )
 
-// Form schema for invoice
 const invoiceFormSchema = z.object({
-  // Sender information
   senderName: z
     .string()
     .min(3, { message: 'Nome deve ter pelo menos 3 caracteres' }),
@@ -124,7 +118,6 @@ const invoiceFormSchema = z.object({
     .length(2, { message: 'Estado deve ter 2 caracteres' }),
   senderZip: z.string().min(8, { message: 'CEP inválido' }),
 
-  // Recipient information
   recipientType: z.enum(['pf', 'pj']),
   recipientName: z
     .string()
@@ -141,7 +134,6 @@ const invoiceFormSchema = z.object({
   recipientZip: z.string().min(8, { message: 'CEP inválido' }),
   recipientEmail: z.string().email({ message: 'Email inválido' }),
 
-  // Invoice details
   invoiceNumber: z.string().min(1, { message: 'Número da nota é obrigatório' }),
   invoiceSeries: z.string().min(1, { message: 'Série da nota é obrigatória' }),
   invoiceDate: z.date(),
@@ -156,13 +148,9 @@ const invoiceFormSchema = z.object({
     .string()
     .min(1, { message: 'Natureza da operação é obrigatória' }),
 
-  // Additional information
   additionalInfo: z.string().optional(),
-
-  // Items will be handled separately
 })
 
-// Schema for invoice items
 const invoiceItemSchema = z.object({
   id: z.string(),
   description: z
@@ -199,7 +187,6 @@ export function InvoiceForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isComplete, setIsComplete] = useState(false)
 
-  // Initialize form with default values
   const form = useForm<z.infer<typeof invoiceFormSchema>>({
     resolver: zodResolver(invoiceFormSchema),
     defaultValues: {
@@ -233,7 +220,6 @@ export function InvoiceForm() {
     },
   })
 
-  // Add a new item to the invoice
   const addItem = () => {
     const newItem: InvoiceItem = {
       id: Math.random().toString(36).substring(2, 9),
@@ -251,19 +237,16 @@ export function InvoiceForm() {
     setItems([...items, newItem])
   }
 
-  // Remove an item from the invoice
   const removeItem = (id: string) => {
     setItems(items.filter((item) => item.id !== id))
   }
 
-  // Update an item in the invoice
   const updateItem = (id: string, field: keyof InvoiceItem, value: any) => {
     setItems(
       items.map((item) => {
         if (item.id === id) {
           const updatedItem = { ...item, [field]: value }
 
-          // Recalculate total value if quantity or unitValue changes
           if (field === 'quantity' || field === 'unitValue') {
             updatedItem.totalValue =
               updatedItem.quantity * updatedItem.unitValue
@@ -276,7 +259,6 @@ export function InvoiceForm() {
     )
   }
 
-  // Calculate invoice totals
   const calculateTotals = () => {
     const subtotal = items.reduce((sum, item) => sum + item.totalValue, 0)
     const icmsTotal = items.reduce(
@@ -308,7 +290,6 @@ export function InvoiceForm() {
     }
   }
 
-  // Format CNPJ
   const formatCNPJ = (value: string) => {
     return value
       .replace(/\D/g, '')
@@ -319,7 +300,6 @@ export function InvoiceForm() {
       .replace(/(-\d{2})\d+?$/, '$1')
   }
 
-  // Format CPF
   const formatCPF = (value: string) => {
     return value
       .replace(/\D/g, '')
@@ -329,7 +309,6 @@ export function InvoiceForm() {
       .replace(/(-\d{2})\d+?$/, '$1')
   }
 
-  // Format CEP
   const formatCEP = (value: string) => {
     return value
       .replace(/\D/g, '')
@@ -337,7 +316,6 @@ export function InvoiceForm() {
       .replace(/(-\d{3})\d+?$/, '$1')
   }
 
-  // Handle form submission
   const onSubmit = (data: z.infer<typeof invoiceFormSchema>) => {
     if (items.length === 0) {
       alert('Adicione pelo menos um item à nota fiscal')
@@ -346,7 +324,6 @@ export function InvoiceForm() {
 
     setIsSubmitting(true)
 
-    // Simulate API call
     setTimeout(() => {
       console.log('Form data:', data)
       console.log('Items:', items)
@@ -355,7 +332,6 @@ export function InvoiceForm() {
     }, 2000)
   }
 
-  // Handle recipient document change
   const handleRecipientDocumentChange = (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -369,13 +345,11 @@ export function InvoiceForm() {
     }
   }
 
-  // Get validation schema based on recipient type
   const getRecipientDocumentSchema = () => {
     const type = form.getValues('recipientType')
     return type === 'pj' ? cnpjSchema : cpfSchema
   }
 
-  // Navigate to next step
   const nextStep = async () => {
     if (currentStep === 1) {
       const isValid = form.trigger([
@@ -423,14 +397,12 @@ export function InvoiceForm() {
     }
   }
 
-  // Navigate to previous step
   const prevStep = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1)
     }
   }
 
-  // Render step indicator
   const renderStepIndicator = () => {
     return (
       <div className='flex items-center justify-center mb-8'>
@@ -462,7 +434,6 @@ export function InvoiceForm() {
     )
   }
 
-  // If form submission is complete, show success message
   if (isComplete) {
     return (
       <Card className='max-w-3xl mx-auto'>

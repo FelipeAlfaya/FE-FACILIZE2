@@ -1,69 +1,68 @@
-"use client"
+'use client'
 
-import type React from "react"
+import type React from 'react'
+import { useState } from 'react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { cn } from '@/lib/utils'
 
-import { useState, type InputHTMLAttributes, forwardRef } from "react"
-import { cn } from "@/lib/utils"
-
-interface AnimatedInputProps extends InputHTMLAttributes<HTMLInputElement> {
+interface AnimatedInputProps {
   label: string
+  name: string
+  value: string
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
   error?: string
+  type?: string
+  required?: boolean
+  placeholder?: string
+  maxLength?: number
+  icon?: React.ReactNode
 }
 
-const AnimatedInput = forwardRef<HTMLInputElement, AnimatedInputProps>(({ label, className, error, ...props }, ref) => {
+export default function AnimatedInput({
+  label,
+  name,
+  value,
+  onChange,
+  error,
+  type = 'text',
+  required = false,
+  placeholder = '',
+  maxLength,
+}: AnimatedInputProps) {
   const [isFocused, setIsFocused] = useState(false)
-  const [hasValue, setHasValue] = useState(false)
-
-  const handleFocus = () => {
-    setIsFocused(true)
-  }
-
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    setIsFocused(false)
-    setHasValue(e.target.value !== "")
-  }
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setHasValue(e.target.value !== "")
-    if (props.onChange) {
-      props.onChange(e)
-    }
-  }
 
   return (
-    <div className="relative">
-      <div
+    <div className='relative space-y-1'>
+      <Label
+        htmlFor={name}
         className={cn(
-          "group relative rounded-md border border-input transition-all duration-300 ease-in-out",
-          isFocused && "ring-2 ring-blue-500 border-blue-500",
-          error && "border-red-500 ring-red-500",
-          className,
+          'absolute left-3 transition-all duration-200',
+          isFocused || value
+            ? '-top-2.5 text-xs bg-background px-1 z-10 rounded-xs'
+            : 'top-2.5',
+          error ? 'text-destructive' : 'text-muted-foreground'
         )}
       >
-        <label
-          className={cn(
-            "absolute left-3 transition-all duration-200 ease-in-out pointer-events-none text-gray-500",
-            (isFocused || hasValue) && "transform -translate-y-[1.15rem] scale-75 text-xs px-1 bg-white z-10",
-            isFocused && !error && "text-blue-500",
-            error && "text-red-500",
-          )}
-        >
-          {label}
-        </label>
-        <input
-          {...props}
-          ref={ref}
-          className="w-full px-3 py-2 bg-transparent border-none focus:outline-none text-foreground"
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          onChange={handleChange}
-        />
-      </div>
-      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+        {label}
+        {required && <span className='text-destructive ml-1'>*</span>}
+      </Label>
+      <Input
+        id={name}
+        name={name}
+        type={type}
+        value={value}
+        onChange={onChange}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
+        className={cn(
+          'pt-2 bg-background',
+          error ? 'border-destructive focus:ring-destructive' : ''
+        )}
+        placeholder={isFocused ? placeholder : ''}
+        maxLength={maxLength}
+      />
+      {error && <p className='text-xs text-destructive'>{error}</p>}
     </div>
   )
-})
-
-AnimatedInput.displayName = "AnimatedInput"
-
-export default AnimatedInput
+}

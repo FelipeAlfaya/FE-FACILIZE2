@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import Footer from '@/components/footer'
 import { motion } from 'framer-motion'
 import { CheckCircle, Rocket, Shield, Sparkles } from 'lucide-react'
+import Link from 'next/link'
 
 export default function Sobre() {
   const teamMembers = [
@@ -28,25 +29,24 @@ export default function Sobre() {
 
   const milestones = [
     {
-      year: '2018',
-      title: 'Fundação da Facilize',
+      year: '2024',
+      title: 'Idealização da Facilize',
       description:
-        'Lançamento da primeira versão do sistema de emissão de notas fiscais para profissionais autônomos.',
+        'Idealização, prototipação, modelagem das regras de negócio e criação de telas da Facilize.',
     },
     {
-      year: '2019',
-      title: 'Expansão de Serviços',
-      description:
-        'Adição de recursos de agendamento e gerenciamento de clientes à plataforma.',
+      year: '2025 - Fevereiro',
+      title: 'Início do desenvolvimento',
+      description: 'Início no desenvolvimento da versão BETA da plataforma.',
     },
     {
-      year: '2021',
-      title: 'Integração com WhatsApp',
+      year: '2025 - Junho',
+      title: 'Lançamento oficial do Beta',
       description:
-        'Lançamento do chatbot integrado ao WhatsApp para melhorar a comunicação com clientes.',
+        'Lançamento oficial da versão beta da plataforma com funcionalidades limitadas a gerenciamento de agendamento para clientes e prestadores de serviço.',
     },
     {
-      year: '2023',
+      year: '2026',
       title: 'Plataforma Completa',
       description:
         'Redesenho completo da plataforma com foco em usabilidade e recursos avançados.',
@@ -85,7 +85,7 @@ export default function Sobre() {
   ]
 
   return (
-    <main className='min-h-screen bg-gray-50 dark:bg-gray-900'>
+    <main className='min-h-screen'>
       <Header />
 
       {/* Hero Section */}
@@ -102,7 +102,7 @@ export default function Sobre() {
           </h1>
           <p className='text-xl text-blue-100 dark:text-blue-200 max-w-2xl mx-auto'>
             Transformando a gestão de negócios com soluções inovadoras desde
-            2018
+            2025
           </p>
         </motion.div>
       </section>
@@ -121,23 +121,24 @@ export default function Sobre() {
               Nossa <span className='text-blue-600'>História</span>
             </h2>
             <p className='text-gray-700 dark:text-gray-300 mb-4'>
-              A Facilize nasceu da necessidade de simplificar a gestão de
-              negócios para empreendedores e profissionais autônomos. Fundada em
-              2018 por Pedro Henrique, nossa empresa começou com uma simples
-              ferramenta de emissão de notas fiscais e evoluiu para uma
-              plataforma completa de gestão empresarial.
+              A Facilize foi fundada em 2024 por Pedro Henrique, Felipe Alfaya e
+              João Paulo, com a missão de simplificar a gestão de negócios para
+              microempreendedores individuais (MEIs), pequenas e grandes
+              empresas. Inspirada pela crescente demanda por ferramentas
+              digitais no Brasil, a plataforma começou como uma solução para
+              facilitar a formalização e a gestão financeira, evoluindo para um
+              aplicativo completo de produtividade com funcionalidades como
+              emissão de notas fiscais, calculadoras financeiras e chatbots com
+              IA.
             </p>
             <p className='text-gray-700 dark:text-gray-300 mb-4'>
-              Após anos trabalhando como consultor para pequenas empresas, Pedro
-              identificou que muitos empreendedores perdiam tempo precioso com
-              tarefas administrativas e burocráticas. Foi então que ele reuniu
-              uma equipe de desenvolvedores para criar uma solução que
-              simplificasse esses processos.
-            </p>
-            <p className='text-gray-700 dark:text-gray-300'>
-              Hoje, atendemos mais de 10.000 clientes em todo o Brasil,
-              ajudando-os a organizar seus negócios, aumentar a produtividade e
-              focar no que realmente importa: o crescimento de suas empresas.
+              Observando os desafios enfrentados por empreendedores,
+              especialmente os 13,2 milhões de MEIs brasileiros, os fundadores
+              uniram suas expertises para criar uma ferramenta que reduzisse a
+              burocracia e otimizasse processos administrativos. A Facilize foi
+              projetada para atender desde autônomos até grandes empresas,
+              oferecendo planos de assinatura que variam de R$ 49 a R$ 999 por
+              mês, com soluções personalizadas para cada segmento.
             </p>
           </div>
           <div className='relative h-[400px] rounded-xl overflow-hidden shadow-lg'>
@@ -154,7 +155,7 @@ export default function Sobre() {
       </section>
 
       {/* Values Section */}
-      <section className='py-16 bg-white dark:bg-gray-800'>
+      <section className='py-16 bg-gray-50 dark:bg-slate-900'>
         <div className='max-w-7xl mx-auto px-4 md:px-8'>
           <motion.div
             initial={{ opacity: 0 }}
@@ -163,7 +164,7 @@ export default function Sobre() {
             viewport={{ once: true }}
             className='text-center mb-12'
           >
-            <h2 className='text-3xl font-bold mb-4'>
+            <h2 className='text-3xl font-bold mb-4 '>
               Nossos <span className='text-blue-600'>Valores</span>
             </h2>
             <p className='text-gray-600 dark:text-gray-300 max-w-2xl mx-auto'>
@@ -206,7 +207,7 @@ export default function Sobre() {
           viewport={{ once: true }}
           className='text-center mb-12'
         >
-          <h2 className='text-3xl font-bold mb-4'>
+          <h2 className='text-3xl font-bold mb-4 dark:text-white'>
             Nossa <span className='text-blue-600'>Equipe</span>
           </h2>
           <p className='text-gray-600 dark:text-gray-300 max-w-2xl mx-auto'>
@@ -244,7 +245,7 @@ export default function Sobre() {
       </section>
 
       {/* Timeline Section */}
-      <section className='py-16 bg-gray-100 dark:bg-gray-800/50'>
+      <section className='py-16 bg-gray-50 dark:bg-slate-900/50'>
         <div className='max-w-4xl mx-auto px-4 md:px-8'>
           <motion.div
             initial={{ opacity: 0 }}
@@ -316,12 +317,14 @@ export default function Sobre() {
             e organizando melhor seus negócios.
           </p>
           <div className='flex flex-col sm:flex-row gap-4 justify-center'>
-            <Button
-              className='bg-white text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-100 px-8 py-4 text-lg'
-              size='lg'
-            >
-              Começar agora
-            </Button>
+            <Link href='/signup'>
+              <Button
+                className='bg-white text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-100 px-8 py-4 text-lg'
+                size='lg'
+              >
+                Começar agora
+              </Button>
+            </Link>
             <Button
               variant='outline'
               className='border-white text-blue-600 hover:bg-blue-700 hover:text-white px-8 py-4 text-lg dark:text-white'
@@ -337,3 +340,4 @@ export default function Sobre() {
     </main>
   )
 }
+

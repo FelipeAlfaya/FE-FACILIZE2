@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   AreaChart,
   Area,
@@ -32,6 +32,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { StatsService } from '@/services/stats-service'
+import { useAuth } from '@/context/AuthContext'
+import { useUser } from '@/context/UserContext'
+import { Loader2 } from 'lucide-react'
+import { toast } from '@/hooks/use-toast'
+import { getToken } from '@/lib/auth'
 
 const appointmentData = [
   { month: 'Jan', agendados: 65, confirmados: 40, cancelados: 10 },
@@ -73,19 +79,210 @@ const serviceData = [
 
 export function DashboardChart() {
   const [timeRange, setTimeRange] = useState('year')
+  const [chartData, setChartData] = useState({
+    appointments: [] as {
+      month: string
+      agendados: number
+      confirmados: number
+      cancelados: number
+    }[],
+    revenue: [] as {
+      month: string
+      receita: number
+      despesas: number
+    }[],
+    services: [] as { name: string; valor: number }[],
+  })
+  const [stats, setStats] = useState({
+    todayAppointments: 0,
+    confirmedToday: 0,
+    pendingToday: 0,
+    nextAppointment: null,
+    activeClients: 0,
+    monthlyRevenue: 0,
+  })
+  const { user: authUser } = useAuth()
+  const { user: userData } = useUser()
+  const [isLoading, setIsLoading] = useState(true)
 
   const getFilteredData = (data: any[]) => {
-    if (timeRange === 'quarter') {
-      return data.slice(-3)
-    } else if (timeRange === 'half') {
-      return data.slice(-6)
-    } else {
-      return data
+    switch (timeRange) {
+      case 'week':
+        return data.slice(-7)
+      case 'month':
+        return data.slice(-30)
+      case 'quarter':
+        return data.slice(-90)
+      case 'half':
+        return data.slice(-180)
+      default:
+        return data
+    }
+  }
+  const filteredAppointmentData = getFilteredData(appointmentData)
+  const filteredRevenueData = getFilteredData(revenueData)
+
+  const getStats = () => {
+    const appointments = getFilteredData(chartData.appointments)
+    const revenue = getFilteredData(chartData.revenue)
+
+    return {
+      appointments: {
+        total: appointments.reduce((sum, item) => sum + item.agendados, 0),
+        confirmed: appointments.reduce(
+          (sum, item) => sum + item.confirmados,
+          0
+        ),
+        conversionRate: appointments.length
+          ? Math.round(
+              (appointments.reduce((sum, item) => sum + item.confirmados, 0) /
+                appointments.reduce((sum, item) => sum + item.agendados, 0)) *
+                100
+            )
+          : 0,
+      },
+      revenue: {
+        total: revenue.reduce((sum, item) => sum + item.receita, 0),
+        expenses: revenue.reduce((sum, item) => sum + item.despesas, 0),
+        profit:
+          revenue.reduce((sum, item) => sum + item.receita, 0) -
+          revenue.reduce((sum, item) => sum + item.despesas, 0),
+      },
     }
   }
 
-  const filteredAppointmentData = getFilteredData(appointmentData)
-  const filteredRevenueData = getFilteredData(revenueData)
+  useEffect(() => {
+    if (!authUser?.id || !userData?.id) return
+
+    const fetchChartData = async () => {
+      try {
+        setIsLoading(true)
+        const today = new Date()
+        let startDate = new Date()
+
+        switch (timeRange) {
+          case 'week':
+            startDate.setDate(today.getDate() - 7)
+            break
+          case 'month':
+            startDate.setMonth(today.getMonth() - 1)
+            break
+          case 'quarter':
+            startDate.setMonth(today.getMonth() - 3)
+            break
+          case 'half':
+            startDate.setMonth(today.getMonth() - 6)
+            break
+          case 'year':
+            startDate.setMonth(today.getMonth() - 12)
+            break
+        }
+
+        // Reset the time to start of day for startDate and end of day for today
+        startDate.setHours(0, 0, 0, 0)
+        today.setHours(23, 59, 59, 999)
+
+        const token = await getToken()
+
+        if (!token) {
+          return
+        }
+
+        // Fetch appointments stats
+        const appointmentsResponse =
+          await StatsService.getAppointmentCountByRange(
+            userData.id,
+            startDate,
+            today,
+            token
+          )
+
+        // Fetch revenue stats
+        const revenueResponse = await StatsService.getRevenueStats(
+          userData.id,
+          token,
+          startDate,
+          today
+        )
+
+        // Transform appointments data
+        const transformedAppointments = [
+          {
+            month: new Date().toLocaleString('pt-BR', { month: 'short' }),
+            agendados: appointmentsResponse.serviceAppointments.total,
+            confirmados: appointmentsResponse.serviceAppointments.confirmed,
+            cancelados: appointmentsResponse.serviceAppointments.cancelled,
+          },
+        ]
+
+        // Transform revenue data
+        const transformedRevenue = revenueResponse.breakdown.map((item) => ({
+          month: new Date(item.date).toLocaleString('pt-BR', {
+            month: 'short',
+          }),
+          receita: item.amount,
+          despesas: 0, // Since API doesn't provide expenses, defaulting to 0
+        }))
+
+        setChartData({
+          appointments: transformedAppointments,
+          revenue: transformedRevenue,
+          services: serviceData, // Keep using mock data for services
+        })
+
+        // Update stats
+        setStats({
+          todayAppointments: appointmentsResponse.total,
+          confirmedToday: appointmentsResponse.serviceAppointments.confirmed,
+          pendingToday:
+            appointmentsResponse.serviceAppointments.total -
+            appointmentsResponse.serviceAppointments.confirmed,
+          nextAppointment: null,
+          activeClients: 0,
+          monthlyRevenue: revenueResponse.totalRevenue,
+        })
+      } catch (error) {
+        console.error('Error fetching chart data:', error)
+        toast({
+          title: 'Erro',
+          description: 'Falha ao carregar dados do gráfico',
+          variant: 'destructive',
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchChartData()
+  }, [authUser?.id, userData?.id, timeRange])
+
+  const { loading: userLoading } = useUser()
+
+  if (userLoading || isLoading) {
+    return (
+      <Card className='col-span-2'>
+        <CardContent className='flex items-center justify-center h-96'>
+          <div className='flex flex-col items-center gap-2'>
+            <Loader2 className='h-8 w-8 animate-spin' />
+            <p className='text-sm text-muted-foreground'>Carregando dados...</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (userData?.type !== 'PROVIDER') {
+    return (
+      <Card className='col-span-2'>
+        <CardContent className='flex items-center justify-center h-96'>
+          <p className='text-sm text-muted-foreground'>
+            Esta visualização está disponível apenas para prestadores de
+            serviço.
+          </p>
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <Card className='col-span-2'>
@@ -99,6 +296,8 @@ export function DashboardChart() {
             <SelectValue placeholder='Selecionar período' />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value='week'>Última semana</SelectItem>
+            <SelectItem value='month'>Último mês</SelectItem>
             <SelectItem value='quarter'>Últimos 3 meses</SelectItem>
             <SelectItem value='half'>Últimos 6 meses</SelectItem>
             <SelectItem value='year'>Último ano</SelectItem>
@@ -133,7 +332,7 @@ export function DashboardChart() {
             >
               <ResponsiveContainer width='100%' height='100%'>
                 <AreaChart
-                  data={filteredAppointmentData}
+                  data={getFilteredData(chartData.appointments)}
                   margin={{
                     top: 10,
                     right: 30,
@@ -181,10 +380,7 @@ export function DashboardChart() {
                   Total Agendados
                 </div>
                 <div className='text-2xl font-bold'>
-                  {filteredAppointmentData.reduce(
-                    (sum, item) => sum + item.agendados,
-                    0
-                  )}
+                  {getStats().appointments.total}
                 </div>
               </Card>
               <Card className='p-3'>
@@ -192,10 +388,7 @@ export function DashboardChart() {
                   Total Confirmados
                 </div>
                 <div className='text-2xl font-bold'>
-                  {filteredAppointmentData.reduce(
-                    (sum, item) => sum + item.confirmados,
-                    0
-                  )}
+                  {getStats().appointments.confirmed}
                 </div>
               </Card>
               <Card className='p-3'>
@@ -203,18 +396,7 @@ export function DashboardChart() {
                   Taxa de Conversão
                 </div>
                 <div className='text-2xl font-bold'>
-                  {Math.round(
-                    (filteredAppointmentData.reduce(
-                      (sum, item) => sum + item.confirmados,
-                      0
-                    ) /
-                      filteredAppointmentData.reduce(
-                        (sum, item) => sum + item.agendados,
-                        0
-                      )) *
-                      100
-                  )}
-                  %
+                  {getStats().appointments.conversionRate}%
                 </div>
               </Card>
             </div>
@@ -236,7 +418,7 @@ export function DashboardChart() {
             >
               <ResponsiveContainer width='100%' height='100%'>
                 <AreaChart
-                  data={filteredRevenueData}
+                  data={getFilteredData(chartData.revenue)}
                   margin={{
                     top: 10,
                     right: 30,
@@ -276,16 +458,13 @@ export function DashboardChart() {
                 </AreaChart>
               </ResponsiveContainer>
             </ChartContainer>
-            <div className='grid grid-cols-3 gap-4'>
+            <div className='grid grid-cols-3 gap-4 w-full'>
               <Card className='p-3'>
                 <div className='text-xs text-muted-foreground'>
                   Receita Total
                 </div>
                 <div className='text-2xl font-bold'>
-                  R${' '}
-                  {filteredRevenueData
-                    .reduce((sum, item) => sum + item.receita, 0)
-                    .toLocaleString('pt-BR')}
+                  R$ {getStats().revenue.total.toLocaleString('pt-BR')}
                 </div>
               </Card>
               <Card className='p-3'>
@@ -293,26 +472,13 @@ export function DashboardChart() {
                   Despesas Totais
                 </div>
                 <div className='text-2xl font-bold'>
-                  R${' '}
-                  {filteredRevenueData
-                    .reduce((sum, item) => sum + item.despesas, 0)
-                    .toLocaleString('pt-BR')}
+                  R$ {getStats().revenue.expenses.toLocaleString('pt-BR')}
                 </div>
               </Card>
               <Card className='p-3'>
                 <div className='text-xs text-muted-foreground'>Lucro</div>
                 <div className='text-2xl font-bold'>
-                  R${' '}
-                  {(
-                    filteredRevenueData.reduce(
-                      (sum, item) => sum + item.receita,
-                      0
-                    ) -
-                    filteredRevenueData.reduce(
-                      (sum, item) => sum + item.despesas,
-                      0
-                    )
-                  ).toLocaleString('pt-BR')}
+                  R$ {getStats().revenue.profit.toLocaleString('pt-BR')}
                 </div>
               </Card>
             </div>
