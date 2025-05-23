@@ -10,6 +10,7 @@ import {
   Code,
   BarChart,
   LogOut,
+  Package,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
@@ -24,6 +25,11 @@ const navItems = [
     title: 'Usuários',
     href: '/admin/users',
     icon: Users,
+  },
+  {
+    title: 'Planos',
+    href: '/admin/plans',
+    icon: Package,
   },
   {
     title: 'Controlador Dev',

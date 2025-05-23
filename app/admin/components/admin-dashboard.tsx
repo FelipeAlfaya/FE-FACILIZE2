@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { TabNavigation } from './tab-navigation'
 import { DashboardView } from './dashboard-view'
 import { UsersView } from './users-view'
+import { PlansView } from './plans-view'
 import { DashboardHeader } from '@/app/dashboard/components/dashboard-header'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -13,6 +14,7 @@ import { NotificationsView } from './notifications-view'
 export type AdminView =
   | 'dashboard'
   | 'users'
+  | 'plans'
   | 'settings'
   | 'dev-controller'
   | 'notifications'
@@ -34,6 +36,8 @@ export function AdminDashboard() {
         return <DashboardView />
       case 'users':
         return <UsersView />
+      case 'plans':
+        return <PlansView />
       case 'notifications':
         return <NotificationsView />
       case 'dev-controller':

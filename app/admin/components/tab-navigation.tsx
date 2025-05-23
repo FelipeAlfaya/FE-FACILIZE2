@@ -9,6 +9,7 @@ import {
   Settings,
   Users,
   Bell,
+  Package,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -38,9 +39,14 @@ export function TabNavigation({
       view: 'dashboard' as AdminView,
     },
     {
-      title: 'Users',
+      title: 'Usuários',
       icon: Users,
       view: 'users' as AdminView,
+    },
+    {
+      title: 'Planos',
+      icon: Package,
+      view: 'plans' as AdminView,
     },
     {
       title: 'Notificações',

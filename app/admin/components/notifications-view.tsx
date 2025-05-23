@@ -125,7 +125,7 @@ export function NotificationsView() {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch('http://localhost:3000/users', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}users`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -161,11 +161,14 @@ export function NotificationsView() {
   const fetchNotifications = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch('http://localhost:3000/notifications', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}notifications`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
 
       if (response.ok) {
         const data = await response.json()
@@ -185,7 +188,7 @@ export function NotificationsView() {
     setIsLoading(true)
     try {
       const response = await fetch(
-        `http://localhost:3000/notifications/filter?type=${type}`,
+        `${process.env.NEXT_PUBLIC_API_URL}notifications/filter?type=${type}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -236,7 +239,7 @@ export function NotificationsView() {
   const handleMarkAsRead = async (id: string) => {
     try {
       const response = await fetch(
-        `http://localhost:3000/notifications/${id}/mark-read`,
+        `${process.env.NEXT_PUBLIC_API_URL}notifications/${id}/mark-read`,
         {
           method: 'PATCH',
           headers: {
@@ -261,7 +264,7 @@ export function NotificationsView() {
   const handleMarkAllAsRead = async () => {
     try {
       const response = await fetch(
-        'http://localhost:3000/notifications/mark-all-read',
+        `${process.env.NEXT_PUBLIC_API_URL}notifications/mark-all-read`,
         {
           method: 'PATCH',
           headers: {
@@ -284,7 +287,7 @@ export function NotificationsView() {
   const handleDelete = async (id: string) => {
     try {
       const response = await fetch(
-        `http://localhost:3000/notifications/${id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}notifications/${id}`,
         {
           method: 'DELETE',
           headers: {
@@ -326,20 +329,23 @@ export function NotificationsView() {
   // Enviar notificação para um usuário específico
   const createNotificationForUser = async (userId: number) => {
     try {
-      const response = await fetch('http://localhost:3000/notifications', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          userId,
-          title: formData.title,
-          message: formData.message,
-          type: formData.type,
-          priority: formData.priority,
-        }),
-      })
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}notifications`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            userId,
+            title: formData.title,
+            message: formData.message,
+            type: formData.type,
+            priority: formData.priority,
+          }),
+        }
+      )
 
       if (response.ok) {
         toast.success(`Notificação enviada para o usuário ID: ${userId}`)
@@ -361,20 +367,23 @@ export function NotificationsView() {
   // Este endpoint é otimizado e faz toda a criação de notificações de uma vez no backend
   const createNotificationForAllUsers = async () => {
     try {
-      const response = await fetch('http://localhost:3000/notifications/bulk', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          title: formData.title,
-          message: formData.message,
-          type: formData.type,
-          priority: formData.priority,
-          sendEmail: formData.sendEmail,
-        }),
-      })
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}notifications/bulk`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            title: formData.title,
+            message: formData.message,
+            type: formData.type,
+            priority: formData.priority,
+            sendEmail: formData.sendEmail,
+          }),
+        }
+      )
 
       if (response.ok) {
         const result = await response.json()
