@@ -273,6 +273,7 @@ export function NotificationsScreen() {
 
       try {
         const apiNotifications = await fetchNotifications(user.id)
+        console.log('asdfasdf', apiNotifications)
         setNotifications(apiNotifications)
       } catch (error) {
         console.error('Failed to load notifications:', error)

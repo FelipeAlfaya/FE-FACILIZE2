@@ -35,6 +35,16 @@ export function ScheduleModal({
   provider,
   onSuccess,
 }: ScheduleModalProps) {
+  // Debug: Console log para verificar os IDs
+  useEffect(() => {
+    if (provider) {
+      console.log('DEBUG - ScheduleModal recebeu provider com IDs:', {
+        userId: provider.id,
+        providerId: provider.providerId,
+      })
+    }
+  }, [provider])
+
   const [date, setDate] = useState<Date>()
   const [time, setTime] = useState<string>('')
   const [selectedService, setSelectedService] = useState<number | null>(null)
@@ -43,16 +53,21 @@ export function ScheduleModal({
   const [availableSlots, setAvailableSlots] = useState<string[]>([])
   const [location, setLocation] = useState('')
   const [notes, setNotes] = useState('')
+  const [isLoadingSlots, setIsLoadingSlots] = useState(false)
 
   function formatDate(receivedDate: Date | undefined) {
     if (!receivedDate) return null
-    const date = new Date(receivedDate)
-    date.setUTCHours(0, 0, 0, 0)
-    return date.toISOString()
+    // Usar formato YYYY-MM-DD para evitar problemas com timezone
+    return receivedDate.toISOString().split('T')[0]
   }
 
   const formattedDate = formatDate(date)
   console.log('formatted date', formattedDate)
+
+  // Ao selecionar uma nova data ou serviço, resetar o horário selecionado
+  useEffect(() => {
+    setTime('')
+  }, [date])
 
   useEffect(() => {
     const fetchAvailability = async () => {
@@ -61,11 +76,34 @@ export function ScheduleModal({
         sessionStorage.getItem('access_token')
       if (date && provider) {
         try {
-          console.log(`${date.toISOString()}, ${provider.id}`)
+          setIsLoadingSlots(true)
+          // Formatar a data como YYYY-MM-DD para API
+          const formattedDateForAPI = date.toISOString().split('T')[0]
+          console.log(
+            `DEBUG - Buscando disponibilidade para: ${formattedDateForAPI}, userId: ${provider.id}, providerId: ${provider.providerId}`
+          )
+
+          // Se você for o usuário com ID 4 (admin), use o providerId 1
+          // Esta é uma solução temporária até que o backend seja corrigido
+          const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}')
+          const currentUserId = userInfo.id
+
+          console.log(`DEBUG - Current user ID: ${currentUserId}`)
+
+          // Determine qual providerId usar
+          let targetProviderId = provider.providerId
+
+          // Se o usuário logado é o admin (ID 4), use o providerId 1
+          if (
+            (currentUserId === 4 || currentUserId === '4') &&
+            provider.id === '4'
+          ) {
+            console.log('DEBUG - Admin detectado, usando providerId=1')
+            targetProviderId = 1
+          }
+
           const response = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}appointments/provider/${
-              provider.id
-            }/availability?date=${date.toISOString()}`,
+            `${process.env.NEXT_PUBLIC_API_URL}appointments/provider/${targetProviderId}/availability?date=${formattedDateForAPI}`,
             {
               headers: {
                 Authorization: `Bearer ${token}`,
@@ -78,7 +116,15 @@ export function ScheduleModal({
           }
 
           const slots = await response.json()
-          setAvailableSlots(slots)
+
+          if (slots && Array.isArray(slots)) {
+            console.log(`Recebidos ${slots.length} slots disponíveis:`, slots)
+            setAvailableSlots(slots)
+          } else {
+            console.error('Formato de resposta inválido:', slots)
+            setAvailableSlots([])
+          }
+
           setTime('')
         } catch (error) {
           console.error('Error fetching availability:', error)
@@ -87,6 +133,9 @@ export function ScheduleModal({
             description: 'Não foi possível carregar os horários disponíveis',
             variant: 'destructive',
           })
+          setAvailableSlots([])
+        } finally {
+          setIsLoadingSlots(false)
         }
       }
     }
@@ -107,22 +156,56 @@ export function ScheduleModal({
 
       // Calcular endTime baseado na duração do serviço
       const [hours, minutes] = time.split(':').map(Number)
-      const endTime = new Date(date)
-      endTime.setHours(hours, minutes + service.duration)
 
-      const endTimeString = `${endTime
+      // Criar uma data com o horário selecionado
+      const startDateTime = new Date(date)
+      startDateTime.setHours(hours, minutes, 0, 0)
+
+      // Adicionar a duração do serviço em minutos para obter o horário final
+      const endDateTime = new Date(startDateTime)
+      endDateTime.setMinutes(endDateTime.getMinutes() + service.duration)
+
+      // Formatar os horários como strings HH:MM
+      const startTimeString = time // já está no formato correto
+      const endTimeString = `${endDateTime
         .getHours()
         .toString()
-        .padStart(2, '0')}:${endTime.getMinutes().toString().padStart(2, '0')}`
+        .padStart(2, '0')}:${endDateTime
+        .getMinutes()
+        .toString()
+        .padStart(2, '0')}`
+
+      console.log(
+        `Calculado horário final: ${startTimeString} + ${service.duration}min = ${endTimeString}`
+      )
 
       const token =
         localStorage.getItem('access_token') ||
         sessionStorage.getItem('access_token')
 
+      // Formato da data para API: YYYY-MM-DD
+      const dateFormatted = date.toISOString().split('T')[0]
+
+      // Determine qual providerId usar
+      const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}')
+      const currentUserId = userInfo.id
+      let targetProviderId = provider.providerId
+
+      // Se o usuário logado é o admin (ID 4), use o providerId 1
+      if (
+        (currentUserId === 4 || currentUserId === '4') &&
+        provider.id === '4'
+      ) {
+        console.log(
+          'DEBUG - Admin detectado, usando providerId=1 para agendamento'
+        )
+        targetProviderId = 1
+      }
+
       const requestBody = {
-        providerId: provider.providerId,
+        providerId: targetProviderId,
         serviceId: Number(selectedService),
-        date: formatDate(date),
+        date: dateFormatted, // Usar formato YYYY-MM-DD
         startTime: time,
         endTime: endTimeString,
         type: 'PRESENTIAL',
@@ -285,30 +368,53 @@ export function ScheduleModal({
                           'justify-start text-left font-normal',
                           !time && 'text-gray-400'
                         )}
-                        disabled={!date || availableSlots.length === 0}
+                        disabled={!date || isLoadingSlots}
                       >
-                        <Clock className='mr-2 h-4 w-4' />
-                        {time ? time : 'Selecione um horário'}
+                        {isLoadingSlots ? (
+                          <div className='flex items-center'>
+                            <div className='mr-2 h-4 w-4 animate-spin rounded-full border-2 border-gray-500 border-t-transparent'></div>
+                            <span>Carregando...</span>
+                          </div>
+                        ) : (
+                          <>
+                            <Clock className='mr-2 h-4 w-4' />
+                            {time ? time : 'Selecione um horário'}
+                          </>
+                        )}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className='w-48 p-0'>
-                      <div className='grid grid-cols-2 gap-2 p-2'>
-                        {availableSlots.map((slot) => (
-                          <Button
-                            key={slot}
-                            variant='ghost'
-                            className={cn(
-                              'justify-start text-left font-normal',
-                              time === slot && 'bg-blue-100 text-blue-600'
-                            )}
-                            onClick={() => setTime(slot)}
-                          >
-                            {slot}
-                          </Button>
-                        ))}
-                      </div>
+                      {availableSlots.length > 0 ? (
+                        <div className='grid grid-cols-2 gap-2 p-2'>
+                          {availableSlots.map((slot) => (
+                            <Button
+                              key={slot}
+                              variant='ghost'
+                              className={cn(
+                                'justify-start text-left font-normal',
+                                time === slot && 'bg-blue-100 text-blue-600'
+                              )}
+                              onClick={() => setTime(slot)}
+                            >
+                              {slot}
+                            </Button>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className='p-4 text-center'>
+                          <p className='text-sm text-gray-500'>
+                            Não há horários disponíveis para esta data.
+                          </p>
+                        </div>
+                      )}
                     </PopoverContent>
                   </Popover>
+                  {date && availableSlots.length === 0 && !isLoadingSlots && (
+                    <p className='text-xs text-amber-500 mt-1'>
+                      Não há horários disponíveis para esta data. Por favor,
+                      selecione outra data.
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -402,4 +508,3 @@ export function ScheduleModal({
     </Dialog>
   )
 }
-

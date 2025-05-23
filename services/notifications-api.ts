@@ -94,3 +94,4 @@ export const subscribeToNotifications = (
 
   return () => socket.disconnect()
 }
+

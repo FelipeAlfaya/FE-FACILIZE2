@@ -4,6 +4,7 @@ import { useState } from 'react'
 import {
   BarChart3,
   ChevronDown,
+  Code,
   LayoutDashboard,
   Settings,
   Users,
@@ -40,6 +41,11 @@ export function TabNavigation({
       icon: Users,
       view: 'users' as AdminView,
     },
+    {
+      title: 'Dev Controller',
+      icon: Code,
+      view: 'dev-controller' as AdminView,
+    },
   ]
 
   return (
@@ -65,4 +71,3 @@ export function TabNavigation({
     </div>
   )
 }
-

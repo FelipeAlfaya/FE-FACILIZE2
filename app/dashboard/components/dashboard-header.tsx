@@ -19,6 +19,7 @@ import {
   Menu,
   ChevronRight,
   BarChart3,
+  Code,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -344,7 +345,12 @@ export function DashboardHeader() {
               {collapsed ? (
                 <Image
                   src={
-                    theme === 'dark'
+                    theme === 'dark' ||
+                    theme === 'nord' ||
+                    theme === 'monokai' ||
+                    theme === 'onedark' ||
+                    theme === 'dracula' ||
+                    theme === 'dimmed'
                       ? '/images/logo-avatar-white.svg'
                       : '/images/logo-color.svg'
                   }
@@ -356,9 +362,14 @@ export function DashboardHeader() {
               ) : (
                 <Image
                   src={
-                    theme === 'dark'
-                      ? '/images/logo-transparente.svg'
-                      : '/images/logo-2.svg'
+                    theme === 'dark' ||
+                    theme === 'nord' ||
+                    theme === 'monokai' ||
+                    theme === 'onedark' ||
+                    theme === 'dracula' ||
+                    theme === 'dimmed'
+                      ? '/images/logo-transparente.png'
+                      : '/images/logo-2.png'
                   }
                   alt='Logo Facilize'
                   width={150}
@@ -388,17 +399,6 @@ export function DashboardHeader() {
             {user?.type === 'PROVIDER' && (
               <>
                 <Link
-                  href='/dashboard'
-                  className={cn(
-                    'flex items-center p-2 rounded-md hover:bg-accent',
-                    collapsed ? 'justify-center' : ''
-                  )}
-                  title={collapsed ? 'Dashboard' : undefined}
-                >
-                  <Home className='h-5 w-5' />
-                  {!collapsed && <span className='ml-3'>Dashboard</span>}
-                </Link>
-                <Link
                   href='/dashboard/accounting'
                   className={cn(
                     'flex items-center p-2 rounded-md hover:bg-accent',
@@ -414,7 +414,7 @@ export function DashboardHeader() {
 
             {user?.isAdmin && (
               <Link
-                href='admin'
+                href='/admin'
                 className={cn(
                   'flex items-center p-2 rounded-md hover:bg-accent',
                   collapsed ? 'justify-center' : ''
@@ -428,6 +428,17 @@ export function DashboardHeader() {
               </Link>
             )}
 
+            <Link
+              href='/dashboard'
+              className={cn(
+                'flex items-center p-2 rounded-md hover:bg-accent',
+                collapsed ? 'justify-center' : ''
+              )}
+              title={collapsed ? 'Dashboard' : undefined}
+            >
+              <Home className='h-5 w-5' />
+              {!collapsed && <span className='ml-3'>Dashboard</span>}
+            </Link>
             <Link
               href='/dashboard/providers'
               className={cn(
@@ -620,6 +631,14 @@ export function DashboardHeader() {
                       <LogOut className='mr-2 h-4 w-4' />
                       <span>Sair</span>
                     </DropdownMenuItem>
+                    {user?.isAdmin && (
+                      <DropdownMenuItem asChild>
+                        <Link href='/admin/dev-controller'>
+                          <Code className='mr-2 h-4 w-4' />
+                          <span>Controlador Dev</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -732,4 +751,3 @@ export function DashboardHeader() {
     </>
   )
 }
-

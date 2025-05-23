@@ -1,7 +1,6 @@
 'use client'
 
 import type React from 'react'
-
 import { useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -40,13 +39,13 @@ export default function AnimatedInput({
         className={cn(
           'absolute left-3 transition-all duration-200',
           isFocused || value
-            ? '-top-2.5 text-xs bg-white dark:bg-black px-1 z-10 rounded-xs'
+            ? '-top-2.5 text-xs bg-background px-1 z-10 rounded-xs'
             : 'top-2.5',
-          error ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'
+          error ? 'text-destructive' : 'text-muted-foreground'
         )}
       >
         {label}
-        {required && <span className='text-red-500 ml-1'>*</span>}
+        {required && <span className='text-destructive ml-1'>*</span>}
       </Label>
       <Input
         id={name}
@@ -56,11 +55,14 @@ export default function AnimatedInput({
         onChange={onChange}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
-        className={cn('pt-2', error ? 'border-red-500 focus:ring-red-500' : '')}
+        className={cn(
+          'pt-2 bg-background',
+          error ? 'border-destructive focus:ring-destructive' : ''
+        )}
         placeholder={isFocused ? placeholder : ''}
         maxLength={maxLength}
       />
-      {error && <p className='text-xs text-red-500'>{error}</p>}
+      {error && <p className='text-xs text-destructive'>{error}</p>}
     </div>
   )
 }

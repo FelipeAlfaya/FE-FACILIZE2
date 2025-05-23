@@ -1,14 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { ScheduleCalendar } from './components/schedule-calendar'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { CheckCircle } from 'lucide-react'
+import { Calendar, CheckCircle, Plus } from 'lucide-react'
 import { DashboardHeader } from '../components/dashboard-header'
 import { AvailabilityManager } from './components/availability-manager'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
+import { AppointmentModal } from './components/appointment-modal'
+import { ServicesTab } from './components/services-tab'
 
 export default function SchedulePage() {
   const searchParams = useSearchParams()
@@ -16,6 +19,8 @@ export default function SchedulePage() {
   const [showSuccess, setShowSuccess] = useState(false)
   const [providerId, setProviderId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false)
+  const initialProviderId = useRef<string | null>(null)
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -35,19 +40,16 @@ export default function SchedulePage() {
         if (!response.ok) throw new Error('Failed to fetch user')
 
         const userData = await response.json()
-        console.log('Full userData response:', userData)
-        console.log('Provider data:', userData.data?.provider)
+        const newProviderId = userData.data?.provider?.id?.toString() || null
+
+        if (initialProviderId.current !== newProviderId) {
+          initialProviderId.current = newProviderId
+          setProviderId(newProviderId)
+        }
 
         setUserType(userData.data.type.toLowerCase())
 
-        if (userData.data?.provider?.id) {
-          const id = userData.data.provider.id.toString()
-          console.log('Setting providerId to:', id)
-          setProviderId(id)
-        } else {
-          console.log('No provider ID found in response')
-          setProviderId(null)
-        }
+        setProviderId((prev) => (prev !== newProviderId ? newProviderId : prev))
       } catch (error) {
         console.error('Error fetching user:', error)
         setProviderId(null)
@@ -99,48 +101,77 @@ export default function SchedulePage() {
             </AlertDescription>
           </Alert>
         )}
-
-        {userType === 'provider' ? (
-          <Tabs defaultValue='calendar'>
-            <TabsList className='mb-6'>
-              <TabsTrigger value='calendar'>Calendário</TabsTrigger>
-              <TabsTrigger value='availability'>Disponibilidade</TabsTrigger>
-            </TabsList>
-            <TabsContent value='calendar'>
-              <ScheduleCalendar />
-            </TabsContent>
-            <TabsContent value='availability'>
-              {providerId ? (
-                <>
-                  <AvailabilityManager providerId={providerId} />
-                  {console.log('Rendering with providerId:', providerId)}
-                </>
-              ) : (
-                <div className='text-center py-12 text-gray-500'>
-                  <p>Nenhum provedor associado a esta conta</p>
+        <div className='flex-row'>
+          {userType === 'provider' ? (
+            <>
+              <Tabs defaultValue='calendar'>
+                <div className='flex justify-between items-center mb-6'>
+                  <TabsList>
+                    <TabsTrigger value='calendar'>Calendário</TabsTrigger>
+                    <TabsTrigger value='availability'>
+                      Disponibilidade
+                    </TabsTrigger>
+                    <TabsTrigger value='services'>
+                      Serviços Prestados
+                    </TabsTrigger>
+                  </TabsList>
+                  <Button
+                    onClick={() => setIsAppointmentModalOpen(true)}
+                    className='bg-primary hover:bg-primary/90'
+                  >
+                    <Plus className='h-4 w-4 mr-2' />
+                    <Calendar className='h-5 w-5' />
+                  </Button>
                 </div>
-              )}
-            </TabsContent>
-          </Tabs>
-        ) : (
-          <Tabs defaultValue='calendar'>
-            <TabsList className='mb-6'>
-              <TabsTrigger value='calendar'>Meus Agendamentos</TabsTrigger>
-              <TabsTrigger value='new'>Novo Agendamento</TabsTrigger>
-            </TabsList>
-            <TabsContent value='calendar'>
-              <ScheduleCalendar />
-            </TabsContent>
-            <TabsContent value='new'>
-              <div className='text-center py-12 text-gray-500'>
-                <p>Funcionalidade em desenvolvimento.</p>
-                <p>Em breve você poderá criar novos agendamentos aqui.</p>
-              </div>
-            </TabsContent>
-          </Tabs>
-        )}
+                <TabsContent value='calendar'>
+                  <ScheduleCalendar />
+                </TabsContent>
+                <TabsContent value='services'>
+                  <ServicesTab />
+                </TabsContent>
+                <TabsContent value='availability'>
+                  {providerId ? (
+                    <>
+                      <AvailabilityManager providerId={providerId} />
+                      {console.log('Rendering with providerId:', providerId)}
+                    </>
+                  ) : (
+                    <div className='text-center py-12 text-gray-500'>
+                      <p>Nenhum provedor associado a esta conta</p>
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </>
+          ) : (
+            <>
+              <Tabs defaultValue='calendar'>
+                <div className='flex justify-between items-center mb-6'>
+                  <TabsList>
+                    <TabsTrigger value='calendar'>
+                      Meus Agendamentos
+                    </TabsTrigger>
+                  </TabsList>
+                  <Button
+                    onClick={() => setIsAppointmentModalOpen(true)}
+                    className='bg-primary hover:bg-primary/90'
+                  >
+                    <Plus className='h-4 w-4 mr-2' />
+                    <Calendar className='h-10 w-10' />
+                  </Button>
+                </div>
+                <TabsContent value='calendar'>
+                  <ScheduleCalendar />
+                </TabsContent>
+              </Tabs>
+            </>
+          )}
+        </div>
+        <AppointmentModal
+          open={isAppointmentModalOpen}
+          onOpenChange={setIsAppointmentModalOpen}
+        />
       </div>
     </>
   )
 }
-

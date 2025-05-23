@@ -449,8 +449,10 @@ export function BillingTab() {
                 <Badge className='bg-blue-500 hover:bg-blue-600'>Ativo</Badge>
               </div>
               <p className='text-gray-500 dark:text-gray-400 mt-1'>
-                {plan.description} • Próxima cobrança em{' '}
-                {new Date().toLocaleDateString('pt-BR')}
+                {plan.description} <br />
+                <span className='text-gray-600'>
+                  • Próxima cobrança em {new Date().toLocaleDateString('pt-BR')}
+                </span>
               </p>
               <ul className='mt-4 grid grid-cols-1 md:grid-cols-2 gap-2'>
                 {plan.features.map((feature) => (
@@ -461,7 +463,7 @@ export function BillingTab() {
                 ))}
               </ul>
             </div>
-            <div className='flex flex-col gap-2'>
+            <div className='flex flex-col gap-2 w-[375px]'>
               <div className='text-center md:text-right'>
                 <span className='text-3xl font-bold'>
                   R$ {plan.price.toFixed(2).replace('.', ',')}
@@ -631,3 +633,4 @@ export function BillingTab() {
     </div>
   )
 }
+

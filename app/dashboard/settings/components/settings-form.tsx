@@ -2,10 +2,10 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card } from '@/components/ui/card'
-import { AppearanceForm } from '../components/appearance-form'
-import { NotificationsForm } from '../components/notifications-form'
-import { AccountForm } from '../components/account-form'
-import { SecurityForm } from '../components/security-form'
+import { AppearanceForm } from './appearance-form'
+import { NotificationsForm } from './notifications-form'
+import { AccountForm } from './account-form'
+import { SecurityForm } from './security-form'
 
 export function SettingsTabs() {
   return (
@@ -39,3 +39,4 @@ export function SettingsTabs() {
     </Tabs>
   )
 }
+

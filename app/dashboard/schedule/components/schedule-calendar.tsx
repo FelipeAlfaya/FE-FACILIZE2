@@ -12,7 +12,6 @@ import {
   User,
   MapPin,
   Video,
-  Phone,
   CalendarCheck,
   ChevronLeft,
   ChevronRight,
@@ -28,6 +27,7 @@ import {
   isYesterday,
   startOfMonth,
   endOfMonth,
+  isPast,
 } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { AppointmentDetailsModal } from './appointment-details-modal'
@@ -90,10 +90,28 @@ type Appointment = {
   User: AppointmentUser | null // For provider-to-provider appointments
 }
 
+type PersonalAppointment = {
+  id: number
+  title: string
+  description: string | null
+  date: Date
+  startTime: string
+  endTime: string
+  location: string | null
+  isAllDay: boolean
+  color: string
+  userId: number
+  createdAt: Date
+  updatedAt: Date
+}
+
 export function ScheduleCalendar() {
   const searchParams = useSearchParams()
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [appointments, setAppointments] = useState<Appointment[]>([])
+  const [personalAppointments, setPersonalAppointments] = useState<
+    PersonalAppointment[]
+  >([])
   const [selectedAppointment, setSelectedAppointment] =
     useState<Appointment | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -122,7 +140,6 @@ export function ScheduleCalendar() {
         const url = `${
           process.env.NEXT_PUBLIC_API_URL
         }appointments/by-date-range?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`
-        console.log('Fetching URL:', url)
 
         const response = await fetch(url, {
           headers: {
@@ -130,14 +147,11 @@ export function ScheduleCalendar() {
           },
         })
 
-        console.log('Response status:', response.status)
         const data = await response.json()
-        console.log('Raw data received:', data)
 
-        // Transform the data
-        const transformedAppointments = data.map((appointment: any) => {
-          console.log('Processing appointment:', appointment)
-          return {
+        // Transformar os agendamentos normais
+        const transformedAppointments = data.appointments.map(
+          (appointment: any) => ({
             ...appointment,
             date: new Date(appointment.date),
             createdAt: new Date(appointment.createdAt),
@@ -151,14 +165,24 @@ export function ScheduleCalendar() {
             confirmedAt: appointment.confirmedAt
               ? new Date(appointment.confirmedAt)
               : null,
-          }
-        })
+          })
+        )
 
-        console.log('Transformed appointments:', transformedAppointments)
+        // Transformar os compromissos pessoais
+        const transformedPersonalAppointments = data.personalAppointments.map(
+          (appointment: any) => ({
+            ...appointment,
+            date: new Date(appointment.date),
+            createdAt: new Date(appointment.createdAt),
+            updatedAt: new Date(appointment.updatedAt),
+          })
+        )
+
         setAppointments(transformedAppointments)
+        setPersonalAppointments(transformedPersonalAppointments)
         setError(null)
       } catch (error) {
-        console.error('Full error details:', error)
+        console.error('Error fetching appointments:', error)
         setError(
           error instanceof Error
             ? error.message
@@ -195,21 +219,31 @@ export function ScheduleCalendar() {
   }, [searchParams])
 
   const appointmentsForSelectedDate = useMemo(() => {
-    return appointments.filter((appointment) =>
+    const regular = appointments.filter((appointment) =>
       isSameDay(new Date(appointment.date), selectedDate)
     )
-  }, [appointments, selectedDate])
+
+    const personal = personalAppointments.filter((appointment) =>
+      isSameDay(new Date(appointment.date), selectedDate)
+    )
+
+    return [...regular, ...personal]
+  }, [appointments, personalAppointments, selectedDate])
 
   const confirmedAppointments = useMemo(
     () =>
       appointmentsForSelectedDate.filter(
-        (a) => a.status === 'CONFIRMED' || a.status === 'COMPLETED'
+        (a) =>
+          'title' in a || a.status === 'CONFIRMED' || a.status === 'COMPLETED'
       ),
     [appointmentsForSelectedDate]
   )
 
   const pendingAppointments = useMemo(
-    () => appointmentsForSelectedDate.filter((a) => a.status === 'PENDING'),
+    () =>
+      appointmentsForSelectedDate.filter(
+        (a) => 'status' in a && a.status === 'PENDING'
+      ),
     [appointmentsForSelectedDate]
   )
 
@@ -221,7 +255,9 @@ export function ScheduleCalendar() {
     setIsModalOpen(true)
   }
 
-  const handleConfirmAppointment = async (appointmentId: number) => {
+  const handleConfirmAppointment = async (
+    appointmentId: number
+  ): Promise<void> => {
     const token =
       localStorage.getItem('access_token') ||
       sessionStorage.getItem('access_token')
@@ -237,9 +273,6 @@ export function ScheduleCalendar() {
           },
           body: JSON.stringify({
             status: 'CONFIRMED',
-            changeStatusDto: {
-              status: 'CONFIRMED',
-            },
           }),
         }
       )
@@ -284,11 +317,17 @@ export function ScheduleCalendar() {
         description: 'Não foi possível confirmar o agendamento',
         variant: 'destructive',
       })
+      throw error // Propaga o erro para que o componente modal possa tratá-lo
     }
   }
 
-  const handleCompleteAppointment = async (appointmentId: number) => {
-    const token = localStorage.getItem('access_token')
+  const handleCompleteAppointment = async (
+    appointmentId: number
+  ): Promise<void> => {
+    const token =
+      localStorage.getItem('access_token') ||
+      sessionStorage.getItem('access_token')
+
     try {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}appointments/${appointmentId}/status`,
@@ -311,7 +350,23 @@ export function ScheduleCalendar() {
       // Atualizar lista de agendamentos
       setAppointments((prev) =>
         prev.map((a) =>
-          a.id === updatedAppointment.id ? updatedAppointment : a
+          a.id === updatedAppointment.id
+            ? {
+                ...updatedAppointment,
+                date: new Date(updatedAppointment.date),
+                createdAt: new Date(updatedAppointment.createdAt),
+                updatedAt: new Date(updatedAppointment.updatedAt),
+                completedAt: updatedAppointment.completedAt
+                  ? new Date(updatedAppointment.completedAt)
+                  : null,
+                cancelledAt: updatedAppointment.cancelledAt
+                  ? new Date(updatedAppointment.cancelledAt)
+                  : null,
+                confirmedAt: updatedAppointment.confirmedAt
+                  ? new Date(updatedAppointment.confirmedAt)
+                  : null,
+              }
+            : a
         )
       )
 
@@ -326,10 +381,13 @@ export function ScheduleCalendar() {
         description: 'Não foi possível marcar o agendamento como concluído',
         variant: 'destructive',
       })
+      throw error // Propaga o erro para que o componente modal possa tratá-lo
     }
   }
 
-  const handleCancelAppointment = async (appointmentId: number) => {
+  const handleCancelAppointment = async (
+    appointmentId: number
+  ): Promise<void> => {
     const token =
       localStorage.getItem('access_token') ||
       sessionStorage.getItem('access_token')
@@ -341,7 +399,7 @@ export function ScheduleCalendar() {
           'Você precisa estar autenticado para cancelar um agendamento',
         variant: 'destructive',
       })
-      return
+      throw new Error('Usuário não autenticado')
     }
 
     try {
@@ -355,9 +413,6 @@ export function ScheduleCalendar() {
           },
           body: JSON.stringify({
             status: 'CANCELLED',
-            changeStatusDto: {
-              status: 'CANCELLED',
-            },
           }),
         }
       )
@@ -402,16 +457,15 @@ export function ScheduleCalendar() {
         description: 'Não foi possível cancelar o agendamento',
         variant: 'destructive',
       })
+      throw error // Propaga o erro para que o componente modal possa tratá-lo
     }
   }
 
   // Function to get dates with appointments for highlighting in calendar
   const getDatesWithAppointments = () => {
-    const dates = new Map<
-      string,
-      { count: number; statuses: Set<AppointmentStatus> }
-    >()
+    const dates = new Map<string, { count: number; statuses: Set<string> }>()
 
+    // Processar appointments normais
     appointments.forEach((appointment) => {
       const dateStr = format(new Date(appointment.date), 'yyyy-MM-dd')
       if (!dates.has(dateStr)) {
@@ -420,6 +474,17 @@ export function ScheduleCalendar() {
       const dateInfo = dates.get(dateStr)!
       dateInfo.count++
       dateInfo.statuses.add(appointment.status)
+    })
+
+    // Processar personalAppointments
+    personalAppointments.forEach((appointment) => {
+      const dateStr = format(new Date(appointment.date), 'yyyy-MM-dd')
+      if (!dates.has(dateStr)) {
+        dates.set(dateStr, { count: 0, statuses: new Set() })
+      }
+      const dateInfo = dates.get(dateStr)!
+      dateInfo.count++
+      dateInfo.statuses.add('PERSONAL') // Marcador para compromissos pessoais
     })
 
     return dates
@@ -496,6 +561,16 @@ export function ScheduleCalendar() {
       default:
         return ''
     }
+  }
+
+  // Função para verificar se o agendamento já passou
+  const isAppointmentPast = (appointment: Appointment): boolean => {
+    const appointmentDate = new Date(appointment.date)
+    const [hours, minutes] = appointment.endTime.split(':').map(Number)
+    const appointmentDateTime = new Date(appointmentDate)
+    appointmentDateTime.setHours(hours, minutes)
+
+    return isPast(appointmentDateTime)
   }
 
   if (isLoading) {
@@ -681,104 +756,156 @@ export function ScheduleCalendar() {
               <TabsContent value='all' className='space-y-4'>
                 {appointmentsForSelectedDate.length > 0 ? (
                   <div className='space-y-4'>
-                    {/* Group appointments by time */}
                     {appointmentsForSelectedDate
                       .sort((a, b) => {
-                        // First sort by time
+                        // Both types have startTime property, so we can access it directly
                         const timeA = a.startTime
                         const timeB = b.startTime
                         return timeA.localeCompare(timeB)
                       })
-                      .map((appointment) => (
-                        <div
-                          key={appointment.id}
-                          className={cn(
-                            'flex items-start justify-between p-4 border rounded-lg',
-                            appointment.status === 'CANCELLED' && 'opacity-70'
-                          )}
-                        >
-                          <div className='flex items-start space-x-4'>
-                            <div className='flex-shrink-0'>
-                              <div className='w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center'>
-                                <User className='h-5 w-5 text-gray-600' />
-                              </div>
-                            </div>
-                            <div>
-                              <h4 className='font-medium'>
-                                {getAppointmentDisplayName(appointment)}
-                              </h4>
-                              <p className='text-sm text-gray-600'>
-                                {appointment.service.name}
-                              </p>
-                              <div className='flex items-center mt-1 text-sm text-gray-500'>
-                                <Clock className='h-3 w-3 mr-1' />
-                                <span>
-                                  {appointment.startTime} -{' '}
-                                  {appointment.endTime}
-                                </span>
-                                <div className='flex items-center ml-3'>
-                                  {getAppointmentTypeIcon(appointment.type)}
-                                  <span className='ml-1'>
-                                    {getAppointmentTypeText(appointment.type)}
-                                  </span>
+                      .map((item) => {
+                        // Check if the item is a personal appointment
+                        const isPersonalAppointment = 'title' in item
+
+                        return (
+                          <div
+                            key={item.id}
+                            className={cn(
+                              'flex items-start justify-between p-4 border rounded-lg',
+                              !isPersonalAppointment &&
+                                item.status === 'CANCELLED' &&
+                                'opacity-70'
+                            )}
+                          >
+                            <div className='flex items-start space-x-4'>
+                              <div className='flex-shrink-0'>
+                                <div className='w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center'>
+                                  <User className='h-5 w-5 text-gray-600' />
                                 </div>
                               </div>
-                              {appointment.location && (
-                                <div className='flex items-center mt-1 text-sm text-gray-500'>
-                                  <MapPin className='h-3 w-3 mr-1' />
-                                  <span>{appointment.location}</span>
-                                </div>
-                              )}
-                              {appointment.isProviderToProvider && (
-                                <Badge
-                                  variant='outline'
-                                  className='mt-2 bg-blue-50 text-blue-600 border-blue-200'
-                                >
-                                  Agendamento entre Provedores
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                          <div className='flex items-center space-x-2'>
-                            <Badge
-                              variant='outline'
-                              className={getStatusColor(appointment.status)}
-                            >
-                              {getStatusText(appointment.status)}
-                            </Badge>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant='ghost' size='icon'>
-                                  <MoreHorizontal className='h-4 w-4' />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align='end'>
-                                <DropdownMenuItem
-                                  onClick={() => handleViewDetails(appointment)}
-                                >
-                                  Ver detalhes
-                                </DropdownMenuItem>
-                                {appointment.status === 'PENDING' && (
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      handleConfirmAppointment(appointment.id)
-                                    }
-                                  >
-                                    Confirmar
-                                  </DropdownMenuItem>
+                              <div>
+                                {isPersonalAppointment ? (
+                                  // Personal Appointment Display
+                                  <>
+                                    <h4 className='font-medium'>
+                                      {item.title}
+                                    </h4>
+                                    {item.description && (
+                                      <p className='text-sm text-gray-600'>
+                                        {item.description}
+                                      </p>
+                                    )}
+                                  </>
+                                ) : (
+                                  // Regular Appointment Display
+                                  <>
+                                    <h4 className='font-medium'>
+                                      {getAppointmentDisplayName(item)}
+                                    </h4>
+                                    <p className='text-sm text-gray-600'>
+                                      {item.service.name}
+                                    </p>
+                                  </>
                                 )}
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    handleCancelAppointment(appointment.id)
-                                  }
-                                >
-                                  Cancelar
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                                <div className='flex items-center mt-1 text-sm text-gray-500'>
+                                  <Clock className='h-3 w-3 mr-1' />
+                                  <span>
+                                    {item.startTime} - {item.endTime}
+                                  </span>
+                                  {!isPersonalAppointment && (
+                                    <div className='flex items-center ml-3'>
+                                      {getAppointmentTypeIcon(item.type)}
+                                      <span className='ml-1'>
+                                        {getAppointmentTypeText(item.type)}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                                {item.location && (
+                                  <div className='flex items-center mt-1 text-sm text-gray-500'>
+                                    <MapPin className='h-3 w-3 mr-1' />
+                                    <span>{item.location}</span>
+                                  </div>
+                                )}
+                                {!isPersonalAppointment &&
+                                  item.isProviderToProvider && (
+                                    <Badge
+                                      variant='outline'
+                                      className='mt-2 bg-blue-50 text-blue-600 border-blue-200'
+                                    >
+                                      Agendamento entre Provedores
+                                    </Badge>
+                                  )}
+                                {isPersonalAppointment && (
+                                  <Badge
+                                    variant='outline'
+                                    className='mt-2'
+                                    style={{
+                                      backgroundColor: `${item.color}15`,
+                                      color: item.color,
+                                      borderColor: `${item.color}30`,
+                                    }}
+                                  >
+                                    Compromisso Pessoal
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                            <div className='flex items-center space-x-2'>
+                              {!isPersonalAppointment && (
+                                <>
+                                  <Badge
+                                    variant='outline'
+                                    className={getStatusColor(item.status)}
+                                  >
+                                    {getStatusText(item.status)}
+                                  </Badge>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant='ghost' size='icon'>
+                                        <MoreHorizontal className='h-4 w-4' />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align='end'>
+                                      <DropdownMenuItem
+                                        onClick={() => handleViewDetails(item)}
+                                      >
+                                        Ver detalhes
+                                      </DropdownMenuItem>
+                                      {item.status === 'PENDING' && (
+                                        <DropdownMenuItem
+                                          onClick={() =>
+                                            handleConfirmAppointment(item.id)
+                                          }
+                                        >
+                                          Confirmar
+                                        </DropdownMenuItem>
+                                      )}
+                                      {item.status === 'CONFIRMED' &&
+                                        isAppointmentPast(item) && (
+                                          <DropdownMenuItem
+                                            onClick={() =>
+                                              handleCompleteAppointment(item.id)
+                                            }
+                                          >
+                                            Marcar como concluído
+                                          </DropdownMenuItem>
+                                        )}
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          handleCancelAppointment(item.id)
+                                        }
+                                      >
+                                        Cancelar
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        )
+                      })}
                   </div>
                 ) : (
                   <div className='text-center py-8'>
@@ -807,10 +934,14 @@ export function ScheduleCalendar() {
                             </div>
                             <div>
                               <h4 className='font-medium'>
-                                {appointment.client?.user.name}
+                                {'title' in appointment
+                                  ? appointment.title
+                                  : appointment.client?.user.name}
                               </h4>
                               <p className='text-sm text-gray-600'>
-                                {appointment.service.name}
+                                {'service' in appointment
+                                  ? appointment.service.name
+                                  : ''}
                               </p>
                               <div className='flex items-center mt-1 text-sm text-gray-500'>
                                 <Clock className='h-3 w-3 mr-1' />
@@ -819,9 +950,11 @@ export function ScheduleCalendar() {
                                   {appointment.endTime}
                                 </span>
                                 <div className='flex items-center ml-3'>
-                                  {getAppointmentTypeIcon(appointment.type)}
+                                  {'type' in appointment &&
+                                    getAppointmentTypeIcon(appointment.type)}
                                   <span className='ml-1'>
-                                    {getAppointmentTypeText(appointment.type)}
+                                    {'type' in appointment &&
+                                      getAppointmentTypeIcon(appointment.type)}
                                   </span>
                                 </div>
                               </div>
@@ -833,21 +966,25 @@ export function ScheduleCalendar() {
                               )}
                             </div>
                           </div>
-                          <div className='flex items-center space-x-2'>
-                            <Badge
-                              variant='outline'
-                              className={getStatusColor(appointment.status)}
-                            >
-                              {getStatusText(appointment.status)}
-                            </Badge>
-                            <Button
-                              variant='ghost'
-                              size='sm'
-                              onClick={() => handleViewDetails(appointment)}
-                            >
-                              Detalhes
-                            </Button>
-                          </div>
+                          {'status' in appointment && (
+                            <div className='flex items-center space-x-2'>
+                              <Badge
+                                variant='outline'
+                                className={getStatusColor(appointment.status)}
+                              >
+                                {getStatusText(appointment.status)}
+                              </Badge>
+                              <Button
+                                variant='ghost'
+                                size='sm'
+                                onClick={() =>
+                                  handleViewDetails(appointment as Appointment)
+                                }
+                              >
+                                Detalhes
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       ))}
                   </div>
@@ -878,10 +1015,14 @@ export function ScheduleCalendar() {
                             </div>
                             <div>
                               <h4 className='font-medium'>
-                                {appointment.client?.user.name}
+                                {'client' in appointment
+                                  ? appointment.client?.user.name
+                                  : appointment.title}
                               </h4>
                               <p className='text-sm text-gray-600'>
-                                {appointment.service.name}
+                                {'service' in appointment
+                                  ? appointment.service.name
+                                  : ''}
                               </p>
                               <div className='flex items-center mt-1 text-sm text-gray-500'>
                                 <Clock className='h-3 w-3 mr-1' />
@@ -890,10 +1031,16 @@ export function ScheduleCalendar() {
                                   {appointment.endTime}
                                 </span>
                                 <div className='flex items-center ml-3'>
-                                  {getAppointmentTypeIcon(appointment.type)}
-                                  <span className='ml-1'>
-                                    {getAppointmentTypeText(appointment.type)}
-                                  </span>
+                                  {'type' in appointment && (
+                                    <>
+                                      {getAppointmentTypeIcon(appointment.type)}
+                                      <span className='ml-1'>
+                                        {getAppointmentTypeText(
+                                          appointment.type
+                                        )}
+                                      </span>
+                                    </>
+                                  )}
                                 </div>
                               </div>
                               {appointment.location && (
@@ -914,7 +1061,11 @@ export function ScheduleCalendar() {
                             <Button
                               variant='ghost'
                               size='sm'
-                              onClick={() => handleViewDetails(appointment)}
+                              onClick={() => {
+                                if ('status' in appointment) {
+                                  handleViewDetails(appointment as Appointment)
+                                }
+                              }}
                             >
                               Detalhes
                             </Button>
@@ -939,8 +1090,10 @@ export function ScheduleCalendar() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         appointment={selectedAppointment}
+        onConfirm={handleConfirmAppointment}
+        onComplete={handleCompleteAppointment}
+        onCancel={handleCancelAppointment}
       />
     </div>
   )
 }
-

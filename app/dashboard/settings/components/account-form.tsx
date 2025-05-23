@@ -215,7 +215,7 @@ export function AccountForm() {
 
         <Separator />
 
-        <div className='space-y-4'>
+        {/* <div className='space-y-4'>
           <div>
             <h3 className='text-lg font-medium mb-2'>Preferências de Conta</h3>
             <p className='text-muted-foreground text-sm mb-4'>
@@ -270,7 +270,7 @@ export function AccountForm() {
               </label>
             </div>
           </div>
-        </div>
+        </div> */}
 
         <div className='flex justify-end space-x-4 pt-4'>
           <Button type='button' variant='outline'>
@@ -284,3 +284,4 @@ export function AccountForm() {
     </form>
   )
 }
+

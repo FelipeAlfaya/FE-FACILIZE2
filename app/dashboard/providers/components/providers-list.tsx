@@ -67,6 +67,14 @@ export function ProvidersList() {
 
         const transformedProviders: TransformedProvider[] = data.data.map(
           (provider: any) => {
+            console.log(
+              'DEBUG - Provider raw data:',
+              JSON.stringify({
+                userId: provider.id,
+                providerId: provider.provider.id,
+              })
+            )
+
             return {
               id: provider.id.toString(),
               providerId: provider.provider.id,
@@ -141,6 +149,13 @@ export function ProvidersList() {
   })
 
   const handleSchedule = (provider: TransformedProvider) => {
+    console.log(
+      'DEBUG - Agendando com provider:',
+      JSON.stringify({
+        userId: provider.id,
+        providerId: provider.providerId,
+      })
+    )
     setSelectedProvider(provider)
     setIsModalOpen(true)
   }
@@ -339,4 +354,3 @@ export function ProvidersList() {
     </div>
   )
 }
-

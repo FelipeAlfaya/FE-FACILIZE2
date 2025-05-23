@@ -42,6 +42,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
 } from '@/components/ui/alert-dialog'
+import { UserDetailsModal } from './user-details-modal'
 
 interface User {
   id: number
@@ -52,6 +53,12 @@ interface User {
   isAdmin: boolean
   createdAt: string
   updatedAt: string
+  phone?: string | null
+  stripeCustomerId: string
+  isEmailVerified: boolean
+  isPhoneVerified: boolean
+  deletedAt: string | null
+  settings?: Record<string, any>
   client?: {
     id: number
     cpf: string
@@ -121,6 +128,10 @@ export function UsersView() {
 
     fetchUsers()
   }, [currentPage])
+
+  const handleUserUpdate = () => {
+    console.log('tesdte')
+  }
 
   const handleDeleteUser = async (user: User) => {
     try {
@@ -272,10 +283,24 @@ export function UsersView() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align='end'>
                               <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                              <DropdownMenuItem>Ver detalhes</DropdownMenuItem>
-                              <DropdownMenuItem>
-                                Editar usuário
-                              </DropdownMenuItem>
+                              <UserDetailsModal
+                                user={{
+                                  ...user,
+                                  phone: user.phone ?? null,
+                                  client: user.client ?? null,
+                                  provider: user.provider ?? null,
+                                }}
+                                onSave={handleUserUpdate}
+                                trigger={
+                                  <DropdownMenuItem
+                                    onSelect={(e) => {
+                                      e.preventDefault()
+                                    }}
+                                  >
+                                    Ver detalhes
+                                  </DropdownMenuItem>
+                                }
+                              />
                               <DropdownMenuSeparator />
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
@@ -363,4 +388,3 @@ export function UsersView() {
     </div>
   )
 }
-

@@ -23,30 +23,84 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
-import { format } from 'date-fns'
+import { format, isPast, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
-  Appointment,
+  Appointment as AppointmentType,
   AppointmentStatus,
-  AppointmentType,
+  AppointmentType as AppointmentTypeEnum,
 } from '@/types/appointment'
+
+// Define um tipo que funciona para ambas as variantes de appointment
+type AppointmentProps = {
+  id: number
+  date: Date | string // Aceita tanto Date quanto string
+  startTime: string
+  endTime: string
+  status: AppointmentStatus
+  type: AppointmentTypeEnum
+  location: string | null
+  notes?: string | null
+  isProviderToProvider: boolean
+  service: {
+    name: string
+    [key: string]: any
+  }
+  client?: {
+    user: {
+      name: string
+      email?: string
+      phone?: string | null
+      [key: string]: any
+    }
+    [key: string]: any
+  } | null
+  User?: {
+    name: string
+    email?: string
+    phone?: string | null
+    [key: string]: any
+  } | null
+  [key: string]: any
+}
 
 type AppointmentDetailsModalProps = {
   isOpen: boolean
   onClose: () => void
-  appointment: Appointment | null
+  appointment: AppointmentProps | null
+  onConfirm?: (appointmentId: number) => Promise<void>
+  onComplete?: (appointmentId: number) => Promise<void>
+  onCancel?: (appointmentId: number) => Promise<void>
 }
 
 export function AppointmentDetailsModal({
   isOpen,
   onClose,
   appointment,
+  onConfirm,
+  onComplete,
+  onCancel,
 }: AppointmentDetailsModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
   const [userInfo, setUserInfo] = useState<any>(null)
 
   if (!appointment) return null
+
+  // Verifica se o horário do agendamento já passou
+  const isAppointmentPast = () => {
+    const appointmentDate =
+      typeof appointment.date === 'string'
+        ? new Date(appointment.date)
+        : appointment.date
+
+    const [hours, minutes] = appointment.endTime.split(':').map(Number)
+    const appointmentDateTime = new Date(appointmentDate)
+    appointmentDateTime.setHours(hours, minutes)
+
+    return isPast(appointmentDateTime)
+  }
 
   const getStatusColor = (status: AppointmentStatus) => {
     switch (status) {
@@ -111,7 +165,7 @@ export function AppointmentDetailsModal({
     }
   }
 
-  const getAppointmentTypeIcon = (type: AppointmentType) => {
+  const getAppointmentTypeIcon = (type: AppointmentTypeEnum) => {
     switch (type) {
       case 'PRESENTIAL':
         return <MapPin className='h-5 w-5 text-blue-600' />
@@ -124,7 +178,7 @@ export function AppointmentDetailsModal({
     }
   }
 
-  const getAppointmentTypeText = (type: AppointmentType) => {
+  const getAppointmentTypeText = (type: AppointmentTypeEnum) => {
     switch (type) {
       case 'PRESENTIAL':
         return 'Presencial'
@@ -137,27 +191,67 @@ export function AppointmentDetailsModal({
     }
   }
 
-  const handleConfirm = () => {
-    if (appointment.status !== 'PENDING') return
+  const handleConfirm = async () => {
+    if (!onConfirm || appointment.status !== 'PENDING') return
 
     setIsSubmitting(true)
-
-    // Simulate API call
-    setTimeout(() => {
-      setIsSubmitting(false)
+    try {
+      await onConfirm(appointment.id)
       setIsSuccess(true)
+      setSuccessMessage('Agendamento confirmado com sucesso!')
 
-      // Reset and close after showing success
+      // Reset e fechar após mostrar sucesso
       setTimeout(() => {
         setIsSuccess(false)
         onClose()
       }, 2000)
-    }, 1500)
+    } catch (error) {
+      console.error('Erro ao confirmar agendamento:', error)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
-  const getSuccessMessage = () => {
-    const clientInfo = getClientInfo()
-    return `O agendamento com ${clientInfo.name} foi confirmado com sucesso.`
+  const handleComplete = async () => {
+    if (!onComplete || appointment.status !== 'CONFIRMED') return
+
+    setIsSubmitting(true)
+    try {
+      await onComplete(appointment.id)
+      setIsSuccess(true)
+      setSuccessMessage('Agendamento marcado como concluído!')
+
+      // Reset e fechar após mostrar sucesso
+      setTimeout(() => {
+        setIsSuccess(false)
+        onClose()
+      }, 2000)
+    } catch (error) {
+      console.error('Erro ao concluir agendamento:', error)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleCancel = async () => {
+    if (!onCancel) return
+
+    setIsSubmitting(true)
+    try {
+      await onCancel(appointment.id)
+      setIsSuccess(true)
+      setSuccessMessage('Agendamento cancelado com sucesso!')
+
+      // Reset e fechar após mostrar sucesso
+      setTimeout(() => {
+        setIsSuccess(false)
+        onClose()
+      }, 2000)
+    } catch (error) {
+      console.error('Erro ao cancelar agendamento:', error)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -172,10 +266,8 @@ export function AppointmentDetailsModal({
             <div className='w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4'>
               <CheckCircle className='h-6 w-6 text-emerald-600' />
             </div>
-            <h3 className='text-lg font-medium mb-2'>
-              Agendamento Confirmado!
-            </h3>
-            <p className='text-gray-600'>{getSuccessMessage()}</p>
+            <h3 className='text-lg font-medium mb-2'>Sucesso!</h3>
+            <p className='text-gray-600'>{successMessage}</p>
           </div>
         ) : (
           <>
@@ -214,7 +306,9 @@ export function AppointmentDetailsModal({
                     <p className='text-sm font-medium'>Data</p>
                     <p className='text-sm text-gray-600 dark:text-gray-400'>
                       {format(
-                        appointment.date,
+                        typeof appointment.date === 'string'
+                          ? new Date(appointment.date)
+                          : appointment.date,
                         "EEEE, dd 'de' MMMM 'de' yyyy",
                         { locale: ptBR }
                       )}
@@ -316,27 +410,54 @@ export function AppointmentDetailsModal({
             <DialogFooter>
               {appointment.status === 'PENDING' && (
                 <>
-                  <Button variant='outline' onClick={onClose}>
-                    Cancelar
-                  </Button>
-                  <Button
-                    onClick={handleConfirm}
-                    disabled={isSubmitting}
-                    className='bg-emerald-600 hover:bg-emerald-700'
-                  >
-                    {isSubmitting ? 'Confirmando...' : 'Confirmar Agendamento'}
-                  </Button>
+                  {onCancel && (
+                    <Button
+                      variant='outline'
+                      onClick={handleCancel}
+                      disabled={isSubmitting}
+                    >
+                      Cancelar
+                    </Button>
+                  )}
+                  {onConfirm && (
+                    <Button
+                      onClick={handleConfirm}
+                      disabled={isSubmitting}
+                      className='bg-emerald-600 hover:bg-emerald-700'
+                    >
+                      {isSubmitting
+                        ? 'Confirmando...'
+                        : 'Confirmar Agendamento'}
+                    </Button>
+                  )}
                 </>
               )}
 
               {appointment.status === 'CONFIRMED' && (
                 <>
-                  <Button variant='outline' onClick={onClose}>
-                    Fechar
-                  </Button>
-                  <Button className='bg-emerald-600 hover:bg-emerald-700'>
-                    Marcar como Concluído
-                  </Button>
+                  {onCancel && (
+                    <Button
+                      variant='outline'
+                      onClick={handleCancel}
+                      disabled={isSubmitting}
+                    >
+                      Cancelar
+                    </Button>
+                  )}
+                  {onComplete && isAppointmentPast() && (
+                    <Button
+                      onClick={handleComplete}
+                      disabled={isSubmitting}
+                      className='bg-emerald-600 hover:bg-emerald-700'
+                    >
+                      {isSubmitting
+                        ? 'Processando...'
+                        : 'Marcar como Concluído'}
+                    </Button>
+                  )}
+                  {!onComplete || !isAppointmentPast() ? (
+                    <Button onClick={onClose}>Fechar</Button>
+                  ) : null}
                 </>
               )}
 
@@ -351,4 +472,3 @@ export function AppointmentDetailsModal({
     </Dialog>
   )
 }
-

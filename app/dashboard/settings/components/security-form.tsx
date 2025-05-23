@@ -1,30 +1,97 @@
 'use client'
 
 import type React from 'react'
-
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
-import { Check } from 'lucide-react'
+import { Check, AlertCircle } from 'lucide-react'
+import { fetchChangePassword } from '@/services/security-api'
+import { useUser } from '@/context/UserContext'
 
 export function SecurityForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [formData, setFormData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  })
+  const { user } = useUser()
+  const userId = Number(user?.id)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target
+    setFormData((prev) => ({
+      ...prev,
+      [id]: value,
+    }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError(null)
+
+    // Validações básicas
+    if (formData.newPassword !== formData.confirmPassword) {
+      setError('As senhas não coincidem')
+      return
+    }
+
+    if (formData.newPassword.length < 8) {
+      setError('A senha deve ter pelo menos 8 caracteres')
+      return
+    }
+
     setIsSubmitting(true)
 
-    setTimeout(() => {
-      setIsSubmitting(false)
+    try {
+      const token =
+        localStorage.getItem('access_token') ||
+        sessionStorage.getItem('access_token')
+
+      if (!token) {
+        throw new Error('token não encontrado')
+      }
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}users/${userId}/change-password`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+          },
+          body: JSON.stringify({
+            oldPassword: formData.currentPassword,
+            newPassword: formData.newPassword,
+          }),
+        }
+      )
+
+      if (!response.ok) {
+        throw new Error('erro fazendo o fetch')
+      }
+
       setShowSuccess(true)
+      setFormData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      })
 
       setTimeout(() => {
         setShowSuccess(false)
       }, 3000)
-    }, 1000)
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Ocorreu um erro desconhecido'
+      )
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -35,6 +102,13 @@ export function SecurityForm() {
         <div className='bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300 p-4 rounded-md mb-6 flex items-center'>
           <Check className='h-5 w-5 mr-2' />
           Senha alterada com sucesso!
+        </div>
+      )}
+
+      {error && (
+        <div className='bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 p-4 rounded-md mb-6 flex items-center'>
+          <AlertCircle className='h-5 w-5 mr-2' />
+          {error}
         </div>
       )}
 
@@ -49,13 +123,26 @@ export function SecurityForm() {
 
           <div className='space-y-4'>
             <div className='space-y-2'>
-              <Label htmlFor='current-password'>Senha Atual</Label>
-              <Input id='current-password' type='password' />
+              <Label htmlFor='currentPassword'>Senha Atual</Label>
+              <Input
+                id='currentPassword' // Corrigido para corresponder à chave do estado
+                type='password'
+                value={formData.currentPassword}
+                onChange={handleChange}
+                required
+              />
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='new-password'>Nova Senha</Label>
-              <Input id='new-password' type='password' />
+              <Label htmlFor='newPassword'>Nova Senha</Label>
+              <Input
+                id='newPassword' // Corrigido para corresponder à chave do estado
+                type='password'
+                value={formData.newPassword}
+                onChange={handleChange}
+                required
+              />
+
               <p className='text-xs text-muted-foreground mt-1'>
                 A senha deve ter pelo menos 8 caracteres e incluir letras
                 maiúsculas, minúsculas, números e símbolos.
@@ -63,8 +150,14 @@ export function SecurityForm() {
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='confirm-password'>Confirmar Nova Senha</Label>
-              <Input id='confirm-password' type='password' />
+              <Label htmlFor='confirmPassword'>Confirmar Nova Senha</Label>
+              <Input
+                id='confirmPassword' // Corrigido para corresponder à chave do estado
+                type='password'
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                required
+              />
             </div>
           </div>
         </div>
@@ -175,3 +268,4 @@ export function SecurityForm() {
     </form>
   )
 }
+

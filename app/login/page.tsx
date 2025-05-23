@@ -65,14 +65,42 @@ export default function Login() {
       ...prev,
       [name]: value,
     }))
+    // Limpa o erro quando o usuário começa a digitar
+    if (errors[name as keyof typeof errors]) {
+      setErrors((prev) => ({ ...prev, [name]: undefined }))
+    }
   }
 
   const handleRememberMeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setRememberMe(e.target.checked)
   }
 
+  const validateForm = () => {
+    const newErrors: { email?: string; password?: string } = {}
+
+    if (!formData.email) {
+      newErrors.email = 'Email é obrigatório'
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'Email inválido'
+    }
+
+    if (!formData.password) {
+      newErrors.password = 'Senha é obrigatória'
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Senha deve ter pelo menos 6 caracteres'
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (!validateForm()) {
+      return
+    }
+
     setIsLoading(true)
 
     try {
@@ -90,7 +118,26 @@ export default function Login() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.message || 'Erro ao fazer login')
+        if (response.status === 401) {
+          // Adiciona erros aos campos correspondentes
+          setErrors({
+            email: 'Credenciais inválidas',
+            password: 'Credenciais inválidas',
+          })
+          throw new Error('Credenciais inválidas. Verifique seu email e senha.')
+        } else if (response.status === 404) {
+          setErrors({ email: 'Usuário não encontrado' })
+          throw new Error('Usuário não encontrado.')
+        } else if (response.status === 400) {
+          if (data.errors) {
+            setErrors(data.errors)
+          } else {
+            setErrors({ email: data.message || 'Dados inválidos' })
+          }
+          throw new Error(data.message || 'Dados inválidos fornecidos.')
+        } else {
+          throw new Error(data.message || 'Erro ao fazer login')
+        }
       }
 
       await login(data.access_token, data.user, rememberMe)
@@ -98,9 +145,26 @@ export default function Login() {
       window.location.href =
         data.user.type === 'CLIENT' ? '/dashboard/providers' : '/dashboard'
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Erro ao fazer login'
-      )
+      let errorMessage = 'Erro ao fazer login'
+
+      if (error instanceof Error) {
+        errorMessage = error.message
+
+        // Tratamento específico para erros de rede
+        if (error.message.includes('Failed to fetch')) {
+          errorMessage =
+            'Não foi possível conectar ao servidor. Verifique sua conexão.'
+          setErrors({
+            email: errorMessage,
+            password: errorMessage,
+          })
+        }
+      }
+
+      toast.error(errorMessage, {
+        position: 'top-center',
+        duration: 5000,
+      })
     } finally {
       setIsLoading(false)
     }
@@ -284,3 +348,4 @@ export default function Login() {
     </main>
   )
 }
+

@@ -1,6 +1,6 @@
 import { UserProvider } from '@/context/UserContext'
 import { DashboardHeader } from '../components/dashboard-header'
-import { SettingsTabs } from '../components/settings-tabs'
+import { SettingsTabs } from './components/settings-tabs'
 
 export default function SettingsPage() {
   return (
@@ -21,3 +21,4 @@ export default function SettingsPage() {
     </UserProvider>
   )
 }
+

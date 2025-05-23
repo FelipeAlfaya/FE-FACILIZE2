@@ -3,6 +3,9 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { ThemeProvider } from '../components/theme-provider'
 import { AuthProvider } from '@/context/AuthContext'
+import { Toaster } from '@/components/ui/toaster'
+import { UserProvider } from '@/context/UserContext'
+import { DevRouteOverlay } from '@/components/dev-route-overlay'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -29,22 +32,36 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang='pt-BR' suppressHydrationWarning>
-      <head>
-        <link rel='icon' href={'/images/logo-color.svg'} sizes='any' />
-      </head>
-      <body className={inter.className}>
-        <AuthProvider>
-          <ThemeProvider
-            attribute='class'
-            defaultTheme='light'
-            enableSystem
-            disableTransitionOnChange
-          >
-            {children}
-          </ThemeProvider>
-        </AuthProvider>
-      </body>
-    </html>
+    <ThemeProvider
+      attribute='class'
+      defaultTheme='light'
+      enableSystem
+      disableTransitionOnChange
+      themes={[
+        'light',
+        'dark',
+        'dracula',
+        'solarized',
+        'dimmed',
+        'nord',
+        'monokai',
+        'onedark',
+      ]}
+    >
+      <html lang='pt-BR' suppressHydrationWarning>
+        <head>
+          <link rel='icon' href='/images/logo-color.svg' sizes='any' />
+        </head>
+        <body className={inter.className}>
+          <AuthProvider>
+            <UserProvider>
+              {children}
+              <DevRouteOverlay />
+            </UserProvider>
+          </AuthProvider>
+          <Toaster />
+        </body>
+      </html>
+    </ThemeProvider>
   )
 }

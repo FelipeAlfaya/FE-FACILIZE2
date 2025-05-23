@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -14,10 +14,35 @@ import {
   LogOut,
   Mail,
   CheckCircle2,
+  Loader2,
 } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { useUser } from '@/context/UserContext'
 import { EmailVerificationModal } from './email-verification-modal'
+import { fetchUserSessions, invalidateSession } from '../actions'
+
+interface Session {
+  id: string
+  deviceInfo: string
+  browser: string
+  os: string
+  ipAddress: string
+  city: string | null
+  region: string | null
+  country: string | null
+  lastActive: string
+  createdAt: string
+}
+
+interface ApiResponse {
+  data: Session[]
+  meta: {
+    total: number
+    page: number
+    limit: number
+    totalPages: number
+  }
+}
 
 export function SecurityTab() {
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -32,10 +57,140 @@ export function SecurityTab() {
   const [touchedPassword, setTouchedPassword] = useState(false)
   const { user } = useUser()
   const userId = user?.id
+  const [sessions, setSessions] = useState<Session[]>([])
+  const [loadingSessions, setLoadingSessions] = useState(true)
+  const [sessionError, setSessionError] = useState('')
+  const [currentSessionToken, setCurrentSessionToken] = useState('')
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
+  }
+
+  useEffect(() => {
+    const loadSessions = async () => {
+      setLoadingSessions(true)
+      const token =
+        typeof window !== 'undefined'
+          ? localStorage.getItem('access_token') ||
+            sessionStorage.getItem('access_token')
+          : null
+
+      if (!token) {
+        setSessionError('Não autorizado. Por favor, faça login novamente.')
+        setLoadingSessions(false)
+        return
+      }
+
+      try {
+        const { sessions, error } = await fetchUserSessions(userId, token)
+
+        if (sessions) {
+          setSessions(sessions)
+          const sessionToken =
+            typeof document !== 'undefined'
+              ? document.cookie
+                  .split('; ')
+                  .find((row) => row.startsWith('session_token='))
+                  ?.split('=')[1] || ''
+              : ''
+          setCurrentSessionToken(sessionToken)
+        }
+
+        if (error) {
+          setSessionError(error)
+        }
+      } catch (error) {
+        setSessionError(
+          error instanceof Error ? error.message : 'Erro desconhecido'
+        )
+      } finally {
+        setLoadingSessions(false)
+      }
+    }
+
+    if (userId) {
+      loadSessions()
+    }
+  }, [userId])
+
+  // Função para formatar a data/hora
+  const formatLastActivity = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffInHours = Math.floor(
+      (now.getTime() - date.getTime()) / (1000 * 60 * 60)
+    )
+
+    if (diffInHours < 1) {
+      const diffInMinutes = Math.floor(
+        (now.getTime() - date.getTime()) / (1000 * 60)
+      )
+      return `Ativo há ${diffInMinutes} minuto${diffInMinutes !== 1 ? 's' : ''}`
+    } else if (diffInHours < 24) {
+      return `Ativo há ${diffInHours} hora${diffInHours !== 1 ? 's' : ''}`
+    } else {
+      return `Último acesso: ${date.toLocaleDateString()} às ${date.toLocaleTimeString()}`
+    }
+  }
+
+  // Função para obter localização formatada
+  const getLocation = (session: Session) => {
+    if (session.city && session.region && session.country) {
+      return `${session.city}, ${session.region}, ${session.country}`
+    }
+    return session.ipAddress === '::1'
+      ? 'Localhost'
+      : 'Localização desconhecida'
+  }
+
+  // Função para invalidar uma sessão
+  const handleInvalidateSession = async (sessionId: string) => {
+    const token =
+      localStorage.getItem('access_token') ||
+      sessionStorage.getItem('access_token')
+
+    if (!token) {
+      throw new Error('Não autorizado. Por favor, faça login novamente.')
+    }
+    const { success, error } = await invalidateSession(sessionId, token)
+
+    if (success) {
+      setSessions(sessions.filter((session) => session.id !== sessionId))
+    } else if (error) {
+      setSessionError(error)
+    }
+  }
+
+  // Função para invalidar todas as outras sessões
+  const handleInvalidateAllOtherSessions = async () => {
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}user-sessions/invalidate-all`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+          },
+        }
+      )
+
+      if (!response.ok) {
+        throw new Error('Falha ao desconectar outras sessões')
+      }
+
+      // Mantém apenas a sessão atual (se houver)
+      const currentSession = sessions.find(
+        (session) =>
+          document.cookie.includes(session.id) ||
+          session.id === currentSessionToken
+      )
+      setSessions(currentSession ? [currentSession] : [])
+    } catch (error) {
+      setSessionError(
+        error instanceof Error ? error.message : 'Erro desconhecido'
+      )
+    }
   }
 
   const getPasswordStrength = (password: string) => {
@@ -123,7 +278,7 @@ export function SecurityTab() {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            Authorization: `Bearer ${localStorage.getItem('access_token')}`,
           },
           body: JSON.stringify({
             oldPassword: formData.oldPassword,
@@ -308,39 +463,88 @@ export function SecurityTab() {
       <Card>
         <CardContent className='p-6'>
           <h3 className='text-lg font-medium mb-4'>Dispositivos Conectados</h3>
-          <div className='space-y-4'>
-            <div className='flex items-center justify-between p-3 bg-accent dark:rounded-md'>
-              <div className='flex items-center space-x-3'>
-                <Laptop className='h-8 w-8 text-gray-500' />
-                <div>
-                  <p className='font-medium'>MacBook Pro - Chrome</p>
-                  <p className='text-sm text-gray-500 dark:text-gray-400'>
-                    São Paulo, Brasil • Ativo agora
-                  </p>
-                </div>
-              </div>
-              <Button variant='outline' size='sm'>
-                <LogOut className='h-4 w-4 mr-2' />
-                Desconectar
-              </Button>
-            </div>
 
-            <div className='flex items-center justify-between p-3 bg-accent dark:rounded-md'>
-              <div className='flex items-center space-x-3'>
-                <Smartphone className='h-8 w-8 text-gray-500' />
-                <div>
-                  <p className='font-medium'>iPhone 13 - Safari</p>
-                  <p className='text-sm text-gray-500 dark:text-gray-400'>
-                    São Paulo, Brasil • Último acesso: 2 horas atrás
-                  </p>
-                </div>
-              </div>
-              <Button variant='outline' size='sm'>
-                <LogOut className='h-4 w-4 mr-2' />
-                Desconectar
-              </Button>
+          {sessionError && (
+            <Alert variant='destructive' className='mb-4'>
+              <AlertCircle className='h-4 w-4' />
+              <AlertTitle>Erro</AlertTitle>
+              <AlertDescription>{sessionError}</AlertDescription>
+            </Alert>
+          )}
+
+          {loadingSessions ? (
+            <div className='flex justify-center items-center py-8'>
+              <Loader2 className='h-8 w-8 animate-spin' />
             </div>
-          </div>
+          ) : (
+            <div className='space-y-4'>
+              {sessions.length === 0 ? (
+                <p className='text-muted-foreground'>
+                  Nenhuma sessão ativa encontrada
+                </p>
+              ) : (
+                <>
+                  {sessions.map((session) => {
+                    const isCurrent =
+                      document.cookie.includes(session.id) ||
+                      session.id === currentSessionToken
+                    return (
+                      <div
+                        key={session.id}
+                        className={`flex items-center justify-between p-3 rounded-md border ${
+                          isCurrent
+                            ? 'border-primary shadow-md' // Highlight current session
+                            : 'border-blue-900' // Regular border for others
+                        }`}
+                      >
+                        <div className='flex items-center space-x-3'>
+                          {session.deviceInfo
+                            .toLowerCase()
+                            .includes('mobile') ? (
+                            <Smartphone className='h-8 w-8 text-gray-500' />
+                          ) : (
+                            <Laptop className='h-8 w-8 text-gray-500' />
+                          )}
+                          <div>
+                            <p className='font-medium'>
+                              {session.os.split(' ')[0]} -{' '}
+                              {session.browser.split(' ')[0]}
+                            </p>
+                            <p className='text-sm text-gray-500 dark:text-gray-400'>
+                              {getLocation(session)} •{' '}
+                              {formatLastActivity(session.lastActive)}
+                            </p>
+                          </div>
+                        </div>
+                        {!isCurrent && (
+                          <Button
+                            variant='outline'
+                            size='sm'
+                            onClick={() => handleInvalidateSession(session.id)}
+                          >
+                            <LogOut className='h-4 w-4 mr-2' />
+                            Desconectar
+                          </Button>
+                        )}
+                      </div>
+                    )
+                  })}
+
+                  {sessions.length > 1 && (
+                    <div className='pt-4'>
+                      <Button
+                        variant='outline'
+                        onClick={handleInvalidateAllOtherSessions}
+                      >
+                        <LogOut className='h-4 w-4 mr-2' />
+                        Desconectar todas as outras sessões
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
