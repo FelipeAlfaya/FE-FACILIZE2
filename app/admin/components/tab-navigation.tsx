@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Settings,
   Users,
+  Bell,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -40,6 +41,11 @@ export function TabNavigation({
       title: 'Users',
       icon: Users,
       view: 'users' as AdminView,
+    },
+    {
+      title: 'Notificações',
+      icon: Bell,
+      view: 'notifications' as AdminView,
     },
     {
       title: 'Dev Controller',

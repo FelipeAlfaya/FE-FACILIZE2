@@ -396,6 +396,17 @@ export function DashboardHeader() {
 
           {/* Navigation links */}
           <nav className='flex-1 overflow-y-auto py-4 px-3'>
+            <Link
+              href='/dashboard'
+              className={cn(
+                'flex items-center p-2 rounded-md hover:bg-accent',
+                collapsed ? 'justify-center' : ''
+              )}
+              title={collapsed ? 'Dashboard' : undefined}
+            >
+              <Home className='h-5 w-5' />
+              {!collapsed && <span className='ml-3'>Dashboard</span>}
+            </Link>
             {user?.type === 'PROVIDER' && (
               <>
                 <Link
@@ -405,6 +416,7 @@ export function DashboardHeader() {
                     collapsed ? 'justify-center' : ''
                   )}
                   title={collapsed ? 'Contabilidade' : undefined}
+                  aria-disabled='true'
                 >
                   <DollarSign className='h-5 w-5' />
                   {!collapsed && <span className='ml-3'>Contabilidade</span>}
@@ -412,6 +424,17 @@ export function DashboardHeader() {
               </>
             )}
 
+            <Link
+              href='/dashboard/providers'
+              className={cn(
+                'flex items-center p-2 rounded-md hover:bg-accent',
+                collapsed ? 'justify-center' : ''
+              )}
+              title={collapsed ? 'Provedores' : undefined}
+            >
+              <Users className='h-5 w-5' />
+              {!collapsed && <span className='ml-3'>Provedores</span>}
+            </Link>
             {user?.isAdmin && (
               <Link
                 href='/admin'
@@ -427,29 +450,6 @@ export function DashboardHeader() {
                 )}
               </Link>
             )}
-
-            <Link
-              href='/dashboard'
-              className={cn(
-                'flex items-center p-2 rounded-md hover:bg-accent',
-                collapsed ? 'justify-center' : ''
-              )}
-              title={collapsed ? 'Dashboard' : undefined}
-            >
-              <Home className='h-5 w-5' />
-              {!collapsed && <span className='ml-3'>Dashboard</span>}
-            </Link>
-            <Link
-              href='/dashboard/providers'
-              className={cn(
-                'flex items-center p-2 rounded-md hover:bg-accent',
-                collapsed ? 'justify-center' : ''
-              )}
-              title={collapsed ? 'Provedores' : undefined}
-            >
-              <Users className='h-5 w-5' />
-              {!collapsed && <span className='ml-3'>Provedores</span>}
-            </Link>
 
             <Link
               href='/dashboard/plans'

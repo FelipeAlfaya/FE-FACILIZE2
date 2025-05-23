@@ -7,6 +7,8 @@ const DEV_ROUTES = [
   '/dashboard/tax-comparison',
   '/dashboard/accounting',
   '/dashboard/chatbot',
+  '/dashboard/invoices',
+  '/dashboard/financial-reports',
 ]
 
 // Função para verificar se uma rota está na lista de desenvolvimento

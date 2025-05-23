@@ -1,8 +1,17 @@
+'use client'
+
+import { useState, useCallback } from 'react'
 import { DashboardHeader } from '../components/dashboard-header'
 import { ProvidersList } from './components/providers-list'
 import { ProviderFilters } from './components/providers-filters'
 
 export default function ProvidersPage() {
+  const [filters, setFilters] = useState<any>({})
+
+  const handleFiltersChange = useCallback((newFilters: any) => {
+    setFilters(newFilters)
+  }, [])
+
   return (
     <div className='min-h-screen bg-background'>
       <DashboardHeader />
@@ -16,10 +25,10 @@ export default function ProvidersPage() {
 
         <div className='grid grid-cols-1 md:grid-cols-4 gap-6'>
           <div className='md:col-span-1'>
-            <ProviderFilters />
+            <ProviderFilters onFiltersChange={handleFiltersChange} />
           </div>
           <div className='md:col-span-3'>
-            <ProvidersList />
+            <ProvidersList filters={filters} />
           </div>
         </div>
       </main>

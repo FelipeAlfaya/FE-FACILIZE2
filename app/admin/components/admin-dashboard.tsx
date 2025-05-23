@@ -8,8 +8,14 @@ import { DashboardHeader } from '@/app/dashboard/components/dashboard-header'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
+import { NotificationsView } from './notifications-view'
 
-export type AdminView = 'dashboard' | 'users' | 'settings' | 'dev-controller'
+export type AdminView =
+  | 'dashboard'
+  | 'users'
+  | 'settings'
+  | 'dev-controller'
+  | 'notifications'
 
 export function AdminDashboard() {
   const [currentView, setCurrentView] = useState<AdminView>('dashboard')
@@ -28,6 +34,8 @@ export function AdminDashboard() {
         return <DashboardView />
       case 'users':
         return <UsersView />
+      case 'notifications':
+        return <NotificationsView />
       case 'dev-controller':
         // Renderizar um placeholder enquanto navega
         return (
