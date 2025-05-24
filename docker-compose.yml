@@ -23,7 +23,7 @@ services:
         max-size: "512k"
         max-file: "2"
         labels: "production"
-    command: ["npm", "start"]
+    command: ["yarn", "start"]
     stdin_open: false
     tty: false
     networks:
