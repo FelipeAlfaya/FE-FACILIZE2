@@ -29,24 +29,27 @@ services:
     networks:
       - facilize-network
 
+  services:
   caddy:
     image: caddy:latest
     container_name: caddy
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+      - "8080:80"
+      - "8443:443"
     volumes:
+      - /root/FE-FACILIZE2/cert.crt:/cert.crt
+      - /root/FE-FACILIZE2/cert.key:/cert.key
       - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
       - caddy_config:/config
     networks:
       - facilize-network
 
-networks:
-  facilize-network:
-    external: true
-
 volumes:
   caddy_data:
   caddy_config:
+
+networks:
+  facilize-network:
+    external: true
