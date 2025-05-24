@@ -4,7 +4,7 @@ import { useAuth } from '@/context/AuthContext'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import DashboardGuard from './dashboard-guard'
-import '../scripts/disableLogs'
+import '../../scripts/disableLogs'
 
 export default function DashboardLayout({
   children,
