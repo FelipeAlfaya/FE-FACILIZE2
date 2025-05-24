@@ -320,4 +320,3 @@ export function TaxDetailsModal({ isOpen, onClose }: TaxDetailsModalProps) {
     </Dialog>
   )
 }
-

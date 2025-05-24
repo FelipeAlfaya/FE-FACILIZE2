@@ -38,7 +38,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
-import { toast } from '@/components/ui/use-toast'
+import { toast } from '@/hooks/use-toast'
 
 type AppointmentStatus = 'CONFIRMED' | 'PENDING' | 'CANCELLED' | 'COMPLETED'
 
@@ -373,7 +373,7 @@ export function ScheduleCalendar() {
       toast({
         title: 'Sucesso',
         description: 'Agendamento marcado como concluído!',
-      })
+      }) // Aguardar um momento antes de mostrar a notificação de avaliação      // para garantir que o backend processou a atualização      setTimeout(() => {        console.log('Tentando mostrar notificação de review para appointmentId:', appointmentId)        showNotification(appointmentId)      }, 1500)
     } catch (error) {
       console.error('Error completing appointment:', error)
       toast({
@@ -701,7 +701,6 @@ export function ScheduleCalendar() {
           </CardContent>
         </Card>
       </div>
-
       <div className='md:col-span-2'>
         <Card className='bg-card text-card-foreground'>
           <CardHeader className='flex flex-row items-center justify-between pb-2'>
@@ -1085,7 +1084,6 @@ export function ScheduleCalendar() {
           </CardContent>
         </Card>
       </div>
-
       <AppointmentDetailsModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

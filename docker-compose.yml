@@ -2,7 +2,10 @@ version: '3.9'
 
 services:
   nextjs:
-    build: .
+    build: 
+      context: .
+      args:
+        - BUILDKIT_PROGRESS=plain
     container_name: FE-Facillize
     ports:
       - "3001:3001"
@@ -10,7 +13,13 @@ services:
       - .env
     environment:
       - NODE_ENV=production
+      - NEXT_TELEMETRY_DISABLED=1
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
     networks:
       - facilize-network
 

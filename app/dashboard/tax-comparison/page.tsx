@@ -20,28 +20,14 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from 'recharts'
-type ValueFormatter = (
-  value: any,
-  name?: string,
-  entry?: any,
-  index?: number
-) => string
 import { Info, ArrowRight, Download } from 'lucide-react'
 import { FinancialNavigation } from '../tax-calculator/components/financial-navigation'
+import { TaxComparisonChart } from './tax-comparison-chart'
 
 interface TaxBreakdown {
-  [key: string]: number | boolean | undefined
+  [key: string]: number | boolean | string | undefined
   exceedsLimit?: boolean
+  activityType?: string
 }
 
 interface TaxResult {
@@ -92,6 +78,15 @@ interface MeiValues {
   monthlyFee: number
   revenueLimit: number
   hasLimit: boolean
+  activityType?: ActivityType
+}
+
+interface IssRates {
+  [key: string]: number
+  default: number
+  professional: number
+  technical: number
+  consulting: number
 }
 
 export default function TaxRegimeComparison() {
@@ -102,6 +97,7 @@ export default function TaxRegimeComparison() {
   const [annex, setAnnex] = useState<AnnexType>('3')
   const [showResults, setShowResults] = useState<boolean>(false)
   const [period, setPeriod] = useState<PeriodType>('monthly')
+  const [chartKey, setChartKey] = useState<number>(0) // Key para forçar re-render do gráfico
 
   // Estados para armazenar resultados dos cálculos
   const [taxResults, setTaxResults] = useState<TaxResults>({
@@ -114,7 +110,7 @@ export default function TaxRegimeComparison() {
   // Dados para o gráfico de comparação
   const [chartData, setChartData] = useState<ChartDataItem[]>([])
 
-  // Anexos do Simples Nacional e suas alíquotas
+  // Anexos do Simples Nacional e suas alíquotas (atualizadas 2025)
   const simplesTotals: Record<AnnexType, number[]> = {
     '1': [4.5, 7.8, 10.0, 11.2, 14.7, 30.0], // Comércio
     '2': [4.5, 7.8, 10.0, 11.2, 14.7, 30.0], // Indústria
@@ -124,7 +120,7 @@ export default function TaxRegimeComparison() {
     '6': [16.93, 17.72, 18.43, 18.77, 19.04, 19.94], // Serviços Profissionais
   }
 
-  // Faixas de faturamento do Simples Nacional (anual)
+  // Faixas de faturamento do Simples Nacional (anual) - atualizadas 2025
   const simplesRanges: number[] = [
     180000, // Até 180.000,00
     360000, // De 180.000,01 a 360.000,00
@@ -134,7 +130,7 @@ export default function TaxRegimeComparison() {
     4800000, // De 3.600.000,01 a 4.800.000,00
   ]
 
-  // Parcelas a deduzir do Simples Nacional
+  // Parcelas a deduzir do Simples Nacional (atualizadas 2025)
   const simplesDeductions: Record<AnnexType, number[]> = {
     '1': [0, 5940, 13860, 22500, 87300, 378000],
     '2': [0, 5940, 13860, 22500, 87300, 378000],
@@ -144,7 +140,7 @@ export default function TaxRegimeComparison() {
     '6': [0, 4230.43, 7078.76, 13353.6, 22628.76, 144768.36],
   }
 
-  // Alíquotas e base de cálculo do Lucro Presumido
+  // Alíquotas e base de cálculo do Lucro Presumido (atualizadas 2025)
   const presumedRates: Record<ActivityType, PresumedRates> = {
     services: { irpj: 0.32, csll: 0.32, pis: 0.0065, cofins: 0.03, iss: 0.05 },
     commerce: { irpj: 0.08, csll: 0.12, pis: 0.0065, cofins: 0.03, icms: 0.18 },
@@ -159,22 +155,84 @@ export default function TaxRegimeComparison() {
     transport: { irpj: 0.16, csll: 0.12, pis: 0.0065, cofins: 0.03, iss: 0.05 },
   }
 
-  // Alíquotas para Lucro Real
+  // Alíquotas para Lucro Real (atualizadas 2025)
   const realRates: RealRates = {
     irpj: 0.15, // 15% sobre o lucro
     csll: 0.09, // 9% sobre o lucro
     pis: 0.0165, // 1,65% sobre o faturamento (não-cumulativo)
     cofins: 0.076, // 7,6% sobre o faturamento (não-cumulativo)
-    // ISS/ICMS varia conforme atividade
-    iss: 0.05,
-    icms: 0.18,
+    iss: 0.05, // Variável por município (2% a 5%)
+    icms: 0.18, // Variável por estado
   }
 
-  // Valores para MEI
-  const meiValues: MeiValues = {
-    monthlyFee: 71.0, // INSS + ISS/ICMS básico - valor atualizado 2025
-    revenueLimit: 8333.33, // Limite mensal MEI (100k anual)
-    hasLimit: true,
+  // Alíquotas de ISS por tipo de serviço (estimativas médias)
+  const issRates: IssRates = {
+    default: 0.05, // 5% - serviços gerais
+    professional: 0.02, // 2% - serviços profissionais (advocacia, contabilidade)
+    technical: 0.03, // 3% - serviços técnicos
+    consulting: 0.05, // 5% - consultoria
+  }
+
+  // Valores para MEI atualizados 2025
+  const getMeiValues = (activityType: ActivityType): MeiValues => {
+    switch (activityType) {
+      case 'commerce':
+        return {
+          monthlyFee: 65.66, // INSS + ICMS
+          revenueLimit: 8333.33, // R$ 100.000 anual / 12
+          hasLimit: true,
+          activityType: 'commerce',
+        }
+      case 'services':
+        return {
+          monthlyFee: 70.66, // INSS + ISS
+          revenueLimit: 8333.33, // R$ 100.000 anual / 12
+          hasLimit: true,
+          activityType: 'services',
+        }
+      case 'industry':
+        return {
+          monthlyFee: 65.66, // INSS + ICMS
+          revenueLimit: 8333.33, // R$ 100.000 anual / 12
+          hasLimit: true,
+          activityType: 'industry',
+        }
+      case 'transport':
+        return {
+          monthlyFee: 70.66, // INSS + ISS
+          revenueLimit: 8333.33, // R$ 100.000 anual / 12
+          hasLimit: true,
+          activityType: 'transport',
+        }
+      default:
+        return {
+          monthlyFee: 71.66, // INSS + ISS + ICMS (atividade mista)
+          revenueLimit: 8333.33,
+          hasLimit: true,
+        }
+    }
+  }
+
+  // Calcula a alíquota de ISS baseada no tipo de serviço e anexo
+  const getIssRate = (
+    activityType: ActivityType,
+    annexType: AnnexType
+  ): number => {
+    if (activityType !== 'services' && activityType !== 'transport') {
+      return 0 // Não há ISS para comércio e indústria
+    }
+
+    switch (annexType) {
+      case '6': // Serviços profissionais
+        return issRates.professional
+      case '5': // Serviços técnicos
+        return issRates.technical
+      case '4': // Serviços específicos
+        return issRates.consulting
+      case '3': // Serviços gerais
+      default:
+        return issRates.default
+    }
   }
 
   // Calcula a faixa do Simples Nacional baseado na receita anual
@@ -250,7 +308,7 @@ export default function TaxRegimeComparison() {
     }
   }
 
-  // Cálculo do Lucro Presumido
+  // Cálculo do Lucro Presumido (melhorado)
   const calculatePresumed = (
     monthlyRevenue: number,
     activityType: ActivityType,
@@ -262,17 +320,18 @@ export default function TaxRegimeComparison() {
     const irpjBase = monthlyRevenue * rates.irpj
     const csllBase = monthlyRevenue * rates.csll
 
-    // Cálculo dos impostos
+    // Cálculo dos impostos federais
     const irpj = irpjBase * 0.15
     const irpjAdd = calculateIrpjAdditional(irpjBase)
     const csll = csllBase * 0.09
     const pis = monthlyRevenue * rates.pis
     const cofins = monthlyRevenue * rates.cofins
 
-    // Impostos municipais/estaduais
+    // Impostos municipais/estaduais com cálculo melhorado
     let municipalTax = 0
     if (activityType === 'services' || activityType === 'transport') {
-      municipalTax = monthlyRevenue * (rates.iss || 0) // ISS
+      const issRate = getIssRate(activityType, annex)
+      municipalTax = monthlyRevenue * issRate // ISS
     } else {
       municipalTax = monthlyRevenue * (rates.icms || 0) // ICMS
       if (activityType === 'industry') {
@@ -297,7 +356,7 @@ export default function TaxRegimeComparison() {
     }
   }
 
-  // Cálculo do Lucro Real
+  // Cálculo do Lucro Real (melhorado)
   const calculateReal = (
     monthlyRevenue: number,
     activityType: ActivityType,
@@ -311,18 +370,23 @@ export default function TaxRegimeComparison() {
     const irpjAdd = calculateIrpjAdditional(profit)
     const csll = profit * realRates.csll
 
-    // Impostos sobre o faturamento (com créditos)
-    // Considerando que cerca de 60% das despesas geram créditos de PIS/COFINS
-    const pisCredits = monthlyExpenses * 0.6 * realRates.pis
-    const cofinsCredits = monthlyExpenses * 0.6 * realRates.cofins
+    // Impostos sobre o faturamento (com créditos aprimorados)
+    // Estimativa de créditos baseada em despesas operacionais típicas
+    const creditRate = Math.min(0.8, monthlyExpenses / monthlyRevenue) // Máximo 80% de crédito
+    const pisCredits = monthlyExpenses * creditRate * realRates.pis
+    const cofinsCredits = monthlyExpenses * creditRate * realRates.cofins
 
-    const pis = monthlyRevenue * realRates.pis - pisCredits
-    const cofins = monthlyRevenue * realRates.cofins - cofinsCredits
+    const pis = Math.max(0, monthlyRevenue * realRates.pis - pisCredits)
+    const cofins = Math.max(
+      0,
+      monthlyRevenue * realRates.cofins - cofinsCredits
+    )
 
     // Impostos municipais/estaduais
     let municipalTax = 0
     if (activityType === 'services' || activityType === 'transport') {
-      municipalTax = monthlyRevenue * realRates.iss // ISS
+      const issRate = getIssRate(activityType, annex)
+      municipalTax = monthlyRevenue * issRate // ISS
     } else {
       municipalTax = monthlyRevenue * realRates.icms // ICMS
     }
@@ -344,11 +408,13 @@ export default function TaxRegimeComparison() {
     }
   }
 
-  // Cálculo do MEI
+  // Cálculo do MEI (atualizado)
   const calculateMEI = (
     monthlyRevenue: number,
     monthlyExpenses: number
   ): TaxResult => {
+    const meiValues = getMeiValues(activity)
+
     if (monthlyRevenue > meiValues.revenueLimit) {
       return {
         totalTax: meiValues.monthlyFee,
@@ -356,6 +422,7 @@ export default function TaxRegimeComparison() {
         breakdown: {
           fixedFee: meiValues.monthlyFee,
           exceedsLimit: true,
+          activityType: meiValues.activityType || activity,
         },
         netProfit:
           monthlyRevenue - meiValues.monthlyFee - Number(monthlyExpenses),
@@ -365,7 +432,10 @@ export default function TaxRegimeComparison() {
     return {
       totalTax: meiValues.monthlyFee,
       effectiveRate: (meiValues.monthlyFee / monthlyRevenue) * 100,
-      breakdown: { fixedFee: meiValues.monthlyFee },
+      breakdown: {
+        fixedFee: meiValues.monthlyFee,
+        activityType: meiValues.activityType || activity,
+      },
       netProfit:
         monthlyRevenue - meiValues.monthlyFee - Number(monthlyExpenses),
     }
@@ -410,34 +480,39 @@ export default function TaxRegimeComparison() {
       mei: meiResult,
     })
 
-    // Atualizar dados do gráfico
-    setChartData([
+    // Atualizar dados do gráfico com validações
+    const newChartData = [
       {
         name: 'Simples Nacional',
-        impostos: simplesResult.totalTax,
-        lucro: simplesResult.netProfit,
-        aliquota: simplesResult.effectiveRate,
+        impostos: Math.max(0, simplesResult.totalTax),
+        lucro: Math.max(0, simplesResult.netProfit),
+        aliquota: Number(simplesResult.effectiveRate.toFixed(2)),
       },
       {
         name: 'Lucro Presumido',
-        impostos: presumidoResult.totalTax,
-        lucro: presumidoResult.netProfit,
-        aliquota: presumidoResult.effectiveRate,
+        impostos: Math.max(0, presumidoResult.totalTax),
+        lucro: Math.max(0, presumidoResult.netProfit),
+        aliquota: Number(presumidoResult.effectiveRate.toFixed(2)),
       },
       {
         name: 'Lucro Real',
-        impostos: realResult.totalTax,
-        lucro: realResult.netProfit,
-        aliquota: realResult.effectiveRate,
+        impostos: Math.max(0, realResult.totalTax),
+        lucro: Math.max(0, realResult.netProfit),
+        aliquota: Number(realResult.effectiveRate.toFixed(2)),
       },
       {
         name: 'MEI',
-        impostos: meiResult.totalTax,
-        lucro: meiResult.netProfit,
-        aliquota: meiResult.effectiveRate,
+        impostos: Math.max(0, meiResult.totalTax),
+        lucro: Math.max(0, meiResult.netProfit),
+        aliquota: Number(meiResult.effectiveRate.toFixed(2)),
       },
-    ])
+    ]
 
+    // Debug: Log para verificar se os dados estão sendo atualizados
+    console.log('Novos dados do gráfico:', newChartData)
+
+    setChartData(newChartData)
+    setChartKey((prev) => prev + 1) // Incrementa a key para forçar re-render
     setShowResults(true)
   }
 
@@ -652,39 +727,7 @@ export default function TaxRegimeComparison() {
               </CardDescription>
             </CardHeader>
             <CardContent className='space-y-6'>
-              <div className='h-64'>
-                <ResponsiveContainer width='100%' height='100%'>
-                  <BarChart
-                    data={chartData}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray='3 3' />
-                    <XAxis dataKey='name' />
-                    <YAxis yAxisId='left' orientation='left' stroke='#82ca9d' />
-                    <YAxis
-                      yAxisId='right'
-                      orientation='right'
-                      stroke='#8884d8'
-                    />
-                    <Tooltip
-                      formatter={(value: number) => formatCurrency(value)}
-                    />
-                    <Legend />
-                    <Bar
-                      yAxisId='left'
-                      dataKey='impostos'
-                      name='Total de Impostos'
-                      fill='#8884d8'
-                    />
-                    <Bar
-                      yAxisId='left'
-                      dataKey='lucro'
-                      name='Lucro Líquido'
-                      fill='#82ca9d'
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              <TaxComparisonChart key={`chart-${chartKey}`} data={chartData} />
 
               <div className='space-y-4'>
                 <div className='grid grid-cols-2 gap-4'>
@@ -820,7 +863,7 @@ export default function TaxRegimeComparison() {
                         {taxResults.mei.breakdown.exceedsLimit
                           ? 'Faturamento excede o limite!'
                           : `Taxa Fixa: ${formatCurrency(
-                              meiValues.monthlyFee
+                              (taxResults.mei.breakdown.fixedFee as number) || 0
                             )}`}
                       </CardDescription>
                     </CardHeader>
@@ -872,4 +915,3 @@ export default function TaxRegimeComparison() {
     </div>
   )
 }
-

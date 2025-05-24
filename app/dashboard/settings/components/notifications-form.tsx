@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Check } from 'lucide-react'
+import { useAuth } from '@/context/AuthContext'
 
 type NotificationSettings = {
   emailEnabled: boolean
@@ -82,6 +83,7 @@ const notificationLabels: {
 ]
 
 export function NotificationsForm() {
+  const { user, token } = useAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [settings, setSettings] = useState<NotificationSettings>({
@@ -101,15 +103,25 @@ export function NotificationsForm() {
 
   useEffect(() => {
     const fetchSettings = async () => {
+      if (!user?.id || !token) {
+        console.error('Usuário não autenticado ou ID não disponível')
+        return
+      }
+
       try {
         const response = await fetch(
-          `${baseApi}users/1/notification-settings`,
+          `${baseApi}/users/${user.id}/notification-settings`,
           {
             headers: {
-              Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+              Authorization: `Bearer ${token}`,
             },
           }
         )
+
+        if (!response.ok) {
+          throw new Error(`Erro HTTP: ${response.status}`)
+        }
+
         const data = await response.json()
         setSettings({
           emailEnabled: data.emailEnabled,
@@ -130,7 +142,7 @@ export function NotificationsForm() {
     }
 
     fetchSettings()
-  }, [])
+  }, [user?.id, token, baseApi])
 
   const handleToggle = (field: keyof NotificationSettings) => {
     setSettings((prev) => ({
@@ -141,17 +153,26 @@ export function NotificationsForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (!user?.id || !token) {
+      console.error('Usuário não autenticado ou ID não disponível')
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
-      const response = await fetch(`${baseApi}users/1/notification-settings`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-        },
-        body: JSON.stringify(settings),
-      })
+      const response = await fetch(
+        `${baseApi}/users/${user.id}/notification-settings`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(settings),
+        }
+      )
 
       if (!response.ok) throw new Error('Falha ao salvar configurações')
 
@@ -162,6 +183,18 @@ export function NotificationsForm() {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  // Mostrar loading se não tiver usuário ou token
+  if (!user || !token) {
+    return (
+      <div className='flex items-center justify-center p-8'>
+        <div className='text-center'>
+          <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4'></div>
+          <p className='text-muted-foreground'>Carregando configurações...</p>
+        </div>
+      </div>
+    )
   }
 
   return (

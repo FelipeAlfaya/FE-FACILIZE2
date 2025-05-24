@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import {
   Bell,
   User,
@@ -20,6 +21,7 @@ import {
   ChevronRight,
   BarChart3,
   Code,
+  Star,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -87,10 +89,16 @@ export function DashboardHeader() {
   const { theme, setTheme } = useTheme()
   const { user } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
   const [isMobile, setIsMobile] = useState<boolean>(false)
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>(
     {}
   )
+
+  // Função para verificar se a rota está ativa
+  const isActiveRoute = (path: string) => {
+    return pathname === path || pathname.startsWith(path + '/')
+  }
 
   const toggleSubMenu = (id: string) => {
     setExpandedItems((prev) => ({
@@ -281,6 +289,20 @@ export function DashboardHeader() {
     fetchNotifications()
   }, [notificationsOpen, user?.id])
 
+  useEffect(() => {
+    if (user?.avatar) {
+      // Se o avatar já está em base64, usar diretamente
+      if (user.avatar.startsWith('data:')) {
+        setAvatarSrc(user.avatar)
+      } else {
+        // Se é uma URL, fazer fetch
+        fetchAvatar(user.avatar)
+      }
+    } else {
+      setAvatarSrc('')
+    }
+  }, [user?.avatar])
+
   const fetchAvatar = async (avatarUrl: string) => {
     try {
       const response = await fetch(
@@ -302,6 +324,7 @@ export function DashboardHeader() {
       }
     } catch (error) {
       console.error('Error fetching avatar:', error)
+      setAvatarSrc('')
     }
   }
 
@@ -399,8 +422,11 @@ export function DashboardHeader() {
             <Link
               href='/dashboard'
               className={cn(
-                'flex items-center p-2 rounded-md hover:bg-accent',
-                collapsed ? 'justify-center' : ''
+                'flex items-center p-2 rounded-md hover:bg-accent transition-colors',
+                collapsed ? 'justify-center' : '',
+                isActiveRoute('/dashboard') && pathname === '/dashboard'
+                  ? 'bg-accent font-medium'
+                  : ''
               )}
               title={collapsed ? 'Dashboard' : undefined}
             >
@@ -412,8 +438,11 @@ export function DashboardHeader() {
                 <Link
                   href='/dashboard/accounting'
                   className={cn(
-                    'flex items-center p-2 rounded-md hover:bg-accent',
-                    collapsed ? 'justify-center' : ''
+                    'flex items-center p-2 rounded-md hover:bg-accent transition-colors',
+                    collapsed ? 'justify-center' : '',
+                    isActiveRoute('/dashboard/accounting')
+                      ? 'bg-accent font-medium'
+                      : ''
                   )}
                   title={collapsed ? 'Contabilidade' : undefined}
                   aria-disabled='true'
@@ -427,8 +456,11 @@ export function DashboardHeader() {
             <Link
               href='/dashboard/providers'
               className={cn(
-                'flex items-center p-2 rounded-md hover:bg-accent',
-                collapsed ? 'justify-center' : ''
+                'flex items-center p-2 rounded-md hover:bg-accent transition-colors',
+                collapsed ? 'justify-center' : '',
+                isActiveRoute('/dashboard/providers')
+                  ? 'bg-accent font-medium'
+                  : ''
               )}
               title={collapsed ? 'Provedores' : undefined}
             >
@@ -439,8 +471,9 @@ export function DashboardHeader() {
               <Link
                 href='/admin'
                 className={cn(
-                  'flex items-center p-2 rounded-md hover:bg-accent',
-                  collapsed ? 'justify-center' : ''
+                  'flex items-center p-2 rounded-md hover:bg-accent transition-colors',
+                  collapsed ? 'justify-center' : '',
+                  isActiveRoute('/admin') ? 'bg-accent font-medium' : ''
                 )}
                 title={collapsed ? 'Administração' : undefined}
               >
@@ -454,8 +487,9 @@ export function DashboardHeader() {
             <Link
               href='/dashboard/plans'
               className={cn(
-                'flex items-center p-2 rounded-md hover:bg-accent',
-                collapsed ? 'justify-center' : ''
+                'flex items-center p-2 rounded-md hover:bg-accent transition-colors',
+                collapsed ? 'justify-center' : '',
+                isActiveRoute('/dashboard/plans') ? 'bg-accent font-medium' : ''
               )}
               title={collapsed ? 'Planos' : undefined}
             >
@@ -466,8 +500,11 @@ export function DashboardHeader() {
             <Link
               href='/dashboard/schedule'
               className={cn(
-                'flex items-center p-2 rounded-md hover:bg-accent',
-                collapsed ? 'justify-center' : ''
+                'flex items-center p-2 rounded-md hover:bg-accent transition-colors',
+                collapsed ? 'justify-center' : '',
+                isActiveRoute('/dashboard/schedule')
+                  ? 'bg-accent font-medium'
+                  : ''
               )}
               title={collapsed ? 'Agenda' : undefined}
             >
@@ -475,12 +512,30 @@ export function DashboardHeader() {
               {!collapsed && <span className='ml-3'>Agenda</span>}
             </Link>
 
+            <Link
+              href='/dashboard/reviews'
+              className={cn(
+                'flex items-center p-2 rounded-md hover:bg-accent transition-colors',
+                collapsed ? 'justify-center' : '',
+                isActiveRoute('/dashboard/reviews')
+                  ? 'bg-accent font-medium'
+                  : ''
+              )}
+              title={collapsed ? 'Avaliações' : undefined}
+            >
+              <Star className='h-5 w-5' />
+              {!collapsed && <span className='ml-3'>Avaliações</span>}
+            </Link>
+
             {user?.provider?.cnpj && (
               <Link
                 href='/dashboard/invoices'
                 className={cn(
-                  'flex items-center p-2 rounded-md hover:bg-accent',
-                  collapsed ? 'justify-center' : ''
+                  'flex items-center p-2 rounded-md hover:bg-accent transition-colors',
+                  collapsed ? 'justify-center' : '',
+                  isActiveRoute('/dashboard/invoices')
+                    ? 'bg-accent font-medium'
+                    : ''
                 )}
                 title={collapsed ? 'Notas Fiscais' : undefined}
               >

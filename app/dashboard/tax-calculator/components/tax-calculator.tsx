@@ -23,7 +23,7 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { TaxResultsChart } from './tax-results-chart'
 import { FinancialNavigation } from './financial-navigation'
-import { TaxDetailsModal } from './tax-details-modal'
+import { TaxEnhancedModal } from './tax-enhanced-modal'
 import { toast } from 'sonner'
 
 export type ActivityType = 'services' | 'commerce' | 'industry' | 'transport'
@@ -42,6 +42,7 @@ export interface TaxBreakdown {
   fixedFee?: number
   exceedsLimit?: boolean
   municipalTax?: number
+  activityType?: string
 }
 
 export interface TaxResult {
@@ -60,7 +61,11 @@ export function TaxCalculator() {
   const [period, setPeriod] = useState<PeriodType>('monthly')
   const [showResults, setShowResults] = useState(false)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
+  const [modalInitialTab, setModalInitialTab] = useState<
+    'calculation' | 'comparison' | 'analysis'
+  >('calculation')
   const [taxResult, setTaxResult] = useState<TaxResult | null>(null)
+  const [chartKey, setChartKey] = useState<number>(0)
 
   // Anexos do Simples Nacional e suas alíquotas
   const simplesTotals: Record<AnnexType, number[]> = {
@@ -117,11 +122,74 @@ export function TaxCalculator() {
     icms: 0.18,
   }
 
-  // Valores para MEI
-  const meiValues = {
-    monthlyFee: 71.0, // INSS + ISS/ICMS básico - valor atualizado 2025
-    revenueLimit: 8333.33, // Limite mensal MEI (100k anual)
-    hasLimit: true,
+  // Alíquotas de ISS por tipo de serviço (estimativas médias)
+  const issRates = {
+    default: 0.05, // 5% - serviços gerais
+    professional: 0.02, // 2% - serviços profissionais (advocacia, contabilidade)
+    technical: 0.03, // 3% - serviços técnicos
+    consulting: 0.05, // 5% - consultoria
+  }
+
+  // Valores para MEI atualizados 2025
+  const getMeiValues = (activityType: ActivityType) => {
+    switch (activityType) {
+      case 'commerce':
+        return {
+          monthlyFee: 65.66, // INSS + ICMS
+          revenueLimit: 8333.33, // R$ 100.000 anual / 12
+          hasLimit: true,
+          activityType: 'commerce',
+        }
+      case 'services':
+        return {
+          monthlyFee: 70.66, // INSS + ISS
+          revenueLimit: 8333.33, // R$ 100.000 anual / 12
+          hasLimit: true,
+          activityType: 'services',
+        }
+      case 'industry':
+        return {
+          monthlyFee: 65.66, // INSS + ICMS
+          revenueLimit: 8333.33, // R$ 100.000 anual / 12
+          hasLimit: true,
+          activityType: 'industry',
+        }
+      case 'transport':
+        return {
+          monthlyFee: 70.66, // INSS + ISS
+          revenueLimit: 8333.33, // R$ 100.000 anual / 12
+          hasLimit: true,
+          activityType: 'transport',
+        }
+      default:
+        return {
+          monthlyFee: 71.66, // INSS + ISS + ICMS (atividade mista)
+          revenueLimit: 8333.33,
+          hasLimit: true,
+        }
+    }
+  }
+
+  // Calcula a alíquota de ISS baseada no tipo de serviço e anexo
+  const getIssRate = (
+    activityType: ActivityType,
+    annexType: AnnexType
+  ): number => {
+    if (activityType !== 'services' && activityType !== 'transport') {
+      return 0 // Não há ISS para comércio e indústria
+    }
+
+    switch (annexType) {
+      case '6': // Serviços profissionais
+        return issRates.professional
+      case '5': // Serviços técnicos
+        return issRates.technical
+      case '4': // Serviços específicos
+        return issRates.consulting
+      case '3': // Serviços gerais
+      default:
+        return issRates.default
+    }
   }
 
   // Calcula a faixa do Simples Nacional baseado na receita anual
@@ -135,7 +203,13 @@ export function TaxCalculator() {
   }
 
   const handleShowDetails = () => {
-    toast.success('Modal de detalhes aberto')
+    setModalInitialTab('calculation')
+    setShowDetailsModal(true)
+  }
+
+  const handleCompareRegimes = () => {
+    setModalInitialTab('comparison')
+    setShowDetailsModal(true)
   }
 
   // Calcula o adicional de IRPJ (para Lucro Real e Presumido quando aplicável)
@@ -212,7 +286,7 @@ export function TaxCalculator() {
     }
   }
 
-  // Cálculo do Lucro Presumido
+  // Cálculo do Lucro Presumido (melhorado)
   const calculatePresumed = (
     monthlyRevenue: number,
     activityType: ActivityType,
@@ -224,17 +298,18 @@ export function TaxCalculator() {
     const irpjBase = monthlyRevenue * rates.irpj
     const csllBase = monthlyRevenue * rates.csll
 
-    // Cálculo dos impostos
+    // Cálculo dos impostos federais
     const irpj = irpjBase * 0.15
     const irpjAdd = calculateIrpjAdditional(irpjBase)
     const csll = csllBase * 0.09
     const pis = monthlyRevenue * rates.pis
     const cofins = monthlyRevenue * rates.cofins
 
-    // Impostos municipais/estaduais
+    // Impostos municipais/estaduais com cálculo melhorado
     let municipalTax = 0
     if (activityType === 'services' || activityType === 'transport') {
-      municipalTax = monthlyRevenue * (rates.iss || 0) // ISS
+      const issRate = getIssRate(activityType, annex)
+      municipalTax = monthlyRevenue * issRate // ISS
     } else {
       municipalTax = monthlyRevenue * (rates.icms || 0) // ICMS
       if (activityType === 'industry') {
@@ -259,7 +334,7 @@ export function TaxCalculator() {
     }
   }
 
-  // Cálculo do Lucro Real
+  // Cálculo do Lucro Real (melhorado)
   const calculateReal = (
     monthlyRevenue: number,
     activityType: ActivityType,
@@ -273,18 +348,23 @@ export function TaxCalculator() {
     const irpjAdd = calculateIrpjAdditional(profit)
     const csll = profit * realRates.csll
 
-    // Impostos sobre o faturamento (com créditos)
-    // Considerando que cerca de 60% das despesas geram créditos de PIS/COFINS
-    const pisCredits = monthlyExpenses * 0.6 * realRates.pis
-    const cofinsCredits = monthlyExpenses * 0.6 * realRates.cofins
+    // Impostos sobre o faturamento (com créditos aprimorados)
+    // Estimativa de créditos baseada em despesas operacionais típicas
+    const creditRate = Math.min(0.8, monthlyExpenses / monthlyRevenue) // Máximo 80% de crédito
+    const pisCredits = monthlyExpenses * creditRate * realRates.pis
+    const cofinsCredits = monthlyExpenses * creditRate * realRates.cofins
 
-    const pis = monthlyRevenue * realRates.pis - pisCredits
-    const cofins = monthlyRevenue * realRates.cofins - cofinsCredits
+    const pis = Math.max(0, monthlyRevenue * realRates.pis - pisCredits)
+    const cofins = Math.max(
+      0,
+      monthlyRevenue * realRates.cofins - cofinsCredits
+    )
 
     // Impostos municipais/estaduais
     let municipalTax = 0
     if (activityType === 'services' || activityType === 'transport') {
-      municipalTax = monthlyRevenue * (realRates.iss ?? 0) // ISS
+      const issRate = getIssRate(activityType, annex)
+      municipalTax = monthlyRevenue * issRate // ISS
     } else {
       municipalTax = monthlyRevenue * (realRates.icms ?? 0) // ICMS
     }
@@ -311,6 +391,7 @@ export function TaxCalculator() {
     monthlyRevenue: number,
     monthlyExpenses: number
   ): TaxResult => {
+    const meiValues = getMeiValues(activity)
     if (monthlyRevenue > meiValues.revenueLimit) {
       return {
         totalTax: meiValues.monthlyFee,
@@ -322,6 +403,7 @@ export function TaxCalculator() {
           cofins: 0,
           fixedFee: meiValues.monthlyFee,
           exceedsLimit: true,
+          activityType: meiValues.activityType,
         },
         netProfit:
           monthlyRevenue - meiValues.monthlyFee - Number(monthlyExpenses),
@@ -337,6 +419,7 @@ export function TaxCalculator() {
         pis: 0,
         cofins: 0,
         fixedFee: meiValues.monthlyFee,
+        activityType: meiValues.activityType,
       },
       netProfit:
         monthlyRevenue - meiValues.monthlyFee - Number(monthlyExpenses),
@@ -392,6 +475,7 @@ export function TaxCalculator() {
     }
 
     setTaxResult(result)
+    setChartKey((prev) => prev + 1)
     setShowResults(true)
   }
 
@@ -737,6 +821,7 @@ export function TaxCalculator() {
 
               <div className='h-64'>
                 <TaxResultsChart
+                  key={`chart-${chartKey}`}
                   results={{
                     incomeTax: taxResult.breakdown.irpj || 0,
                     socialSecurity: taxResult.breakdown.csll || 0,
@@ -761,7 +846,11 @@ export function TaxCalculator() {
                 >
                   Ver Detalhes
                 </Button>
-                <Button variant='outline' className='flex-1'>
+                <Button
+                  variant='outline'
+                  className='flex-1'
+                  onClick={handleCompareRegimes}
+                >
                   Comparar Regimes
                 </Button>
                 <Button className='flex-1'>Exportar Cálculo</Button>
@@ -833,7 +922,7 @@ export function TaxCalculator() {
         </Card>
       </div>
 
-      <TaxDetailsModal
+      <TaxEnhancedModal
         isOpen={showDetailsModal}
         onClose={() => setShowDetailsModal(false)}
         taxResult={taxResult}
@@ -843,8 +932,8 @@ export function TaxCalculator() {
         revenue={revenue}
         expenses={expenses}
         period={period}
+        initialTab={modalInitialTab}
       />
     </div>
   )
 }
-

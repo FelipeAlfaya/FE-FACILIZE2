@@ -10,7 +10,7 @@ import { Calendar } from '@/components/ui/calendar'
 import { AppointmentDetailsModal } from '../../schedule/components/appointment-details-modal'
 import { format, isSameDay, startOfMonth, endOfMonth } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { toast } from '@/components/ui/use-toast'
+import { toast } from '@/hooks/use-toast'
 import { Appointment, AppointmentStatus } from '@/types/appointment'
 
 export function ProviderDashboard() {
@@ -544,4 +544,3 @@ export function ProviderDashboard() {
     </div>
   )
 }
-

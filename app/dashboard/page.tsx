@@ -30,13 +30,14 @@ import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { useUser } from '@/context/UserContext'
 import { useEffect, useState } from 'react'
-import { toast } from '@/components/ui/use-toast'
+import { toast } from '@/hooks/use-toast'
 import { format, subDays } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { DashboardChart } from './components/dashboard-chart'
+import TestToastPage from './test-toast-page'
 
 export interface User {
   id: number
@@ -842,6 +843,7 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
             </div>
+            <TestToastPage />
           </>
         )}
       </main>

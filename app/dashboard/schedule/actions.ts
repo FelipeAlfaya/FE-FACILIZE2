@@ -8,6 +8,10 @@ const API_URL = `${process.env.NEXT_PUBLIC_API_URL}`
 
 export async function createPersonalAppointment(data: any, token: string) {
   try {
+    console.log('DEBUG - Frontend enviando dados:', data)
+    console.log('DEBUG - Tipo da data no frontend:', typeof data.date)
+    console.log('DEBUG - Valor da data no frontend:', data.date)
+
     const response = await fetch(`${API_URL}appointments/personal`, {
       method: 'POST',
       headers: {
@@ -17,7 +21,12 @@ export async function createPersonalAppointment(data: any, token: string) {
       body: JSON.stringify(data),
     })
 
+    console.log('DEBUG - Response status:', response.status)
+    console.log('DEBUG - Response ok:', response.ok)
+
     if (!response.ok) {
+      const errorText = await response.text()
+      console.log('DEBUG - Response error text:', errorText)
       throw new Error('Failed to create personal appointment')
     }
 
@@ -99,4 +108,3 @@ export async function getPersonalAppointments() {
     throw error
   }
 }
-

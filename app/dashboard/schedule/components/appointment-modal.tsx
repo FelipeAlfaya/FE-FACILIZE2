@@ -34,7 +34,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { Switch } from '@/components/ui/switch'
-import { toast } from '@/components/ui/use-toast'
+import { toast } from '@/hooks/use-toast'
 import { startTransition, useTransition } from 'react'
 import { ptBR } from 'date-fns/locale'
 import { createPersonalAppointment } from '@/app/dashboard/schedule/actions'
@@ -94,16 +94,14 @@ export function AppointmentModal({
         }
 
         const appointmentData = {
-          ...data,
-          startDate: format(
-            new Date(`${format(data.date, 'yyyy-MM-dd')}T${data.startTime}:00`),
-            "yyyy-MM-dd'T'HH:mm:ss"
-          ),
-          endDate: format(
-            new Date(`${format(data.date, 'yyyy-MM-dd')}T${data.endTime}:00`),
-            "yyyy-MM-dd'T'HH:mm:ss"
-          ),
+          title: data.title,
+          description: data.description,
+          date: data.date.toISOString(),
+          startTime: data.startTime,
+          endTime: data.endTime,
+          location: data.location,
           isAllDay: data.isAllDay,
+          color: data.color,
         }
 
         await createPersonalAppointment(appointmentData, token)
@@ -367,4 +365,3 @@ export function AppointmentModal({
     </Dialog>
   )
 }
-

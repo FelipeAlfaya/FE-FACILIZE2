@@ -28,7 +28,7 @@ import {
   Service,
   ServiceResponse,
 } from '@/app/api/services-api'
-import { useToast } from '@/components/ui/use-toast'
+import { useToast } from '@/hooks/use-toast'
 import { formatCurrency } from '@/lib/utils'
 import {
   AlertDialog,
