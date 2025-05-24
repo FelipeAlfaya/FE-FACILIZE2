@@ -11,6 +11,7 @@ import TestimonialsSection from '@/components/testimonials-section'
 import HowItWorks from '@/components/how-it-works'
 import AnimatedSection from '@/components/animated-section'
 import { motion } from 'framer-motion'
+import '../scripts/disableLogs'
 
 export default function Home() {
   return (
@@ -206,4 +207,3 @@ export default function Home() {
     </main>
   )
 }
-

@@ -37,7 +37,6 @@ import { cn } from '@/lib/utils'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { DashboardChart } from './components/dashboard-chart'
-import TestToastPage from './test-toast-page'
 
 export interface User {
   id: number
@@ -843,7 +842,6 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
             </div>
-            <TestToastPage />
           </>
         )}
       </main>

@@ -6,6 +6,7 @@ import { AuthProvider } from '@/context/AuthContext'
 import { Toaster } from '@/components/ui/toaster'
 import { UserProvider } from '@/context/UserContext'
 import { DevRouteOverlay } from '@/components/dev-route-overlay'
+import '../scripts/disableLogs'
 
 const inter = Inter({ subsets: ['latin'] })
 

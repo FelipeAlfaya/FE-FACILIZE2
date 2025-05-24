@@ -14,12 +14,18 @@ services:
     environment:
       - NODE_ENV=production
       - NEXT_TELEMETRY_DISABLED=1
+      - CI=true
+      - DISABLE_ESLINT_PLUGIN=true
     restart: unless-stopped
     logging:
       driver: "json-file"
       options:
-        max-size: "1m"
-        max-file: "1"
+        max-size: "512k"
+        max-file: "2"
+        labels: "production"
+    command: ["npm", "start"]
+    stdin_open: false
+    tty: false
     networks:
       - facilize-network
 
