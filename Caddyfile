@@ -1,0 +1,4 @@
+https://167.114.31.41 {
+  tls /cert.crt /cert.key
+  reverse_proxy nextjs:3001
+}
